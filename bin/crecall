@@ -130,7 +130,7 @@ memory_add() {
   
   # Parse optional flags
   local category=""
-  local importance=""
+  local importance="0"
   local tags=""
   
   while [ $# -gt 0 ]; do
@@ -155,31 +155,24 @@ memory_add() {
   
   test -z "$content" && echo 'Provide memory content' && exit 1
   
-  # If API is available, use it
+  # If API is available, use Python helper script
   if api_available; then
-    local json_data="{\"content\":\"$content\""
+    local script_dir="$(dirname "$(readlink -f "$0")")"
+    local cmd="python3 \"$script_dir/create_memory.py\" \"$content\""
     
     if [ -n "$category" ]; then
-      json_data="$json_data,\"category\":\"$category\""
+      cmd="$cmd --category \"$category\""
     fi
     
     if [ -n "$importance" ]; then
-      json_data="$json_data,\"importance\":$importance"
+      cmd="$cmd --importance \"$importance\""
     fi
     
     if [ -n "$tags" ]; then
-      # Convert comma-separated tags to JSON array
-      local tags_json=$(echo "$tags" | awk -F',' '{printf "["} {for(i=1;i<=NF;i++){printf "\"%s\"", $i; if(i<NF) printf ","}} {printf "]"}')
-      json_data="$json_data,\"tags\":$tags_json"
+      cmd="$cmd --tags \"$tags\""
     fi
     
-    json_data="$json_data}"
-    
-    local response=$(api_call POST /api/memories \
-      -H "Content-Type: application/json" \
-      -d "$json_data")
-    
-    echo "[crecall] Memory added via API"
+    eval "$cmd"
   else
     # Fallback to local file
     printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$content" >> "$MEMORY_FILE"
