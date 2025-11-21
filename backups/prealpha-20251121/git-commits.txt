@@ -1,0 +1,5 @@
+720872e Complete pre-alpha release packaging
+218bbb9 Update README with build infrastructure and v0.1.0d-7 details
+bafe70e Add performance profiling and query optimization
+ac0e99e v0.1.0d-7: Professional build infrastructure and testing
+030023d v0.1.0d-6: Complete settings menu, theme system, and infrastructure
