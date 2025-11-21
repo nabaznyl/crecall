@@ -1,12 +1,15 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.1.0d-6",
+  "version": "0.1.0-dev-7",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -32,6 +35,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
+    "prettier": "^3.2.5",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",

@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-nightly
+build
+build-nightly
+*.log
+.env
+.vscode
+.idea
+*.swp
+*.swo
+*~

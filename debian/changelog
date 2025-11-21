@@ -1,3 +1,18 @@
+crecall (0.1.0d-7) unstable; urgency=medium
+
+  * Implement professional build infrastructure (stable/nightly/dev channels)
+  * Add VERSION file as single source of truth
+  * Create automated build scripts (version-bump, build-stable, build-nightly, release)
+  * Implement multi-stage Dockerfiles with optimization
+  * Add GitHub Actions CI/CD pipeline with automated testing and releases
+  * Create comprehensive test suite (pytest with fixtures and integration tests)
+  * Add linting configurations (Black, Pylint, ESLint, Prettier)
+  * Create CONTRIBUTING.md and BUILD_STANDARDS.md documentation
+  * Add code quality scripts (lint.sh with check/fix modes)
+  * Update all package.json files with format and lint scripts
+
+ -- Local Maintainer <maintainer@example.com>  Thu, 21 Nov 2025 12:00:00 +0000
+
 crecall (0.1.0d-6) unstable; urgency=medium
 
   * Documentation pruning and consolidation

@@ -26,7 +26,7 @@ crash_detector = CrashDetector()
 app = FastAPI(
     title="crecall API",
     description="Session recall and memory management system",
-    version="0.1.0d-6 (preview)",
+    version="0.1.0-dev-7",
     docs_url="/docs",
     redoc_url="/redoc",
 )

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-VERSION="v0.1.0d-6 (preview)"
+VERSION="0.1.0-dev-7"
 DATA_HOME="$HOME/.recall_memory"
 LOG_FILE="$DATA_HOME/recall.log"
 STATE_FILE="$DATA_HOME/state.json"

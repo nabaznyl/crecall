@@ -1,0 +1,12 @@
+# crecall Version Information
+# This file is the single source of truth for version numbers
+# Format: MAJOR.MINOR.PATCH-CHANNEL
+# Channels: stable, nightly, dev
+
+VERSION=0.1.0
+CHANNEL=dev
+BUILD_NUMBER=7
+FULL_VERSION=${VERSION}-${CHANNEL}-${BUILD_NUMBER}
+
+# Version history:
+# 0.1.0-dev-7: (Add description)

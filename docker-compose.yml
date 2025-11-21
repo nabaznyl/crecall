@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # Stable release configuration
+  crecall-stable:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_CHANNEL: stable
+    image: crecall:stable
+    container_name: crecall-stable
+    ports:
+      - "8000:8000"
+    volumes:
+      - crecall-data:/root/.recall_memory
+      - ./config:/app/config:ro
+    environment:
+      - CRECALL_ENV=production
+      - DATABASE_URL=sqlite:////root/.recall_memory/crecall.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Nightly build configuration
+  crecall-nightly:
+    build:
+      context: .
+      dockerfile: Dockerfile.nightly
+    image: crecall:nightly
+    container_name: crecall-nightly
+    ports:
+      - "8001:8000"
+    volumes:
+      - crecall-nightly-data:/root/.recall_memory
+    environment:
+      - CRECALL_ENV=nightly
+      - CRECALL_DEBUG=1
+    restart: unless-stopped
+    profiles:
+      - nightly
+
+  # Development configuration
+  crecall-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: crecall:dev
+    container_name: crecall-dev
+    ports:
+      - "8002:8000"
+      - "5173:5173"
+      - "5678:5678"  # debugpy
+    volumes:
+      - .:/app
+      - crecall-dev-data:/root/.recall_memory
+    environment:
+      - CRECALL_ENV=development
+      - CRECALL_DEBUG=1
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    profiles:
+      - dev
+
+  # PostgreSQL for production
+  postgres:
+    image: postgres:16-alpine
+    container_name: crecall-postgres
+    environment:
+      - POSTGRES_DB=crecall
+      - POSTGRES_USER=crecall
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    profiles:
+      - postgres
+
+  # Redis for caching (future)
+  redis:
+    image: redis:7-alpine
+    container_name: crecall-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    profiles:
+      - redis
+
+volumes:
+  crecall-data:
+    driver: local
+  crecall-nightly-data:
+    driver: local
+  crecall-dev-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  default:
+    name: crecall-network

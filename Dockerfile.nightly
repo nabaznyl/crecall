@@ -1,0 +1,50 @@
+# Dockerfile for nightly builds
+# Build: docker build -f Dockerfile.nightly -t crecall:nightly .
+
+ARG PYTHON_VERSION=3.11
+ARG NODE_VERSION=20
+
+FROM python:${PYTHON_VERSION}-slim as backend-builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/ ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -e .
+
+FROM node:${NODE_VERSION}-alpine as frontend-builder
+
+WORKDIR /build
+COPY frontend/ ./
+RUN npm ci && npm run build
+
+FROM python:${PYTHON_VERSION}-slim
+
+LABEL maintainer="crecall developers"
+LABEL description="crecall Nightly Build"
+LABEL version="nightly"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=backend-builder /build /app/backend
+COPY --from=backend-builder /usr/local/lib/python${PYTHON_VERSION}/site-packages /usr/local/lib/python${PYTHON_VERSION}/site-packages
+COPY --from=frontend-builder /build/dist /app/frontend/dist
+COPY bin/ /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/crecall* && \
+    mkdir -p /root/.recall_memory
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/ || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -4,8 +4,52 @@ Version history and changelog in checklist format.
 
 ---
 
-## v0.1.0d-3 (preview) - November 21, 2025
-## v0.1.0d-4 (preview) - November 21, 2025
+## v0.1.0d-7 (preview) - November 21, 2025
+
+**Professional Build Infrastructure & Standards**
+- [x] Implemented VERSION file as single source of truth for versioning
+- [x] Created `scripts/version-bump.sh` for automated version management across all components
+- [x] Built `scripts/build-stable.sh` for production release builds
+- [x] Built `scripts/build-nightly.sh` for automated nightly builds with date-based versioning
+- [x] Built `scripts/release.sh` for full release automation (test, build, tag, commit)
+- [x] Created multi-stage Dockerfiles for stable/nightly/dev builds
+- [x] Implemented `docker-compose.yml` with profiles for all build channels
+- [x] Added GitHub Actions CI/CD pipeline (`.github/workflows/ci-cd.yml`)
+  - Automated linting (Black, Pylint, ESLint, Prettier)
+  - Multi-version testing (Python 3.10, 3.11, 3.12)
+  - Nightly builds (scheduled daily at 2 AM UTC)
+  - Stable release automation on git tags
+  - Docker image builds and publishing
+  - Security scanning with Trivy
+- [x] Created linting configurations: `pyproject.toml`, `.prettierrc`, `.prettierignore`
+- [x] Added `scripts/lint.sh` for code quality checks (check/fix modes)
+- [x] Implemented comprehensive test suite:
+  - `backend/pytest.ini` configuration
+  - `backend/tests/conftest.py` with fixtures
+  - Unit tests: `test_sessions.py`, `test_clips.py`, `test_memories.py`
+  - Integration tests: `test_integration.py`
+- [x] Created professional documentation:
+  - `CONTRIBUTING.md` - Contributor guidelines, workflow, standards
+  - `BUILD_STANDARDS.md` - Complete build infrastructure documentation
+- [x] Updated `frontend/package.json` and `vscode-extension/package.json` with lint/format scripts
+
+**Build Channels Implemented:**
+- **Stable:** Production releases from `main` branch, full quality gates
+- **Nightly:** Automated daily builds from `develop` branch
+- **Dev:** Local development builds for rapid iteration
+
+**Quality Infrastructure:**
+- Code formatting: Black (Python), Prettier (JS/TS)
+- Linting: Pylint, ESLint
+- Type checking: Mypy
+- Testing: pytest with coverage reporting
+- CI/CD: GitHub Actions with multi-stage workflows
+- Containers: Optimized multi-stage Docker builds
+
+**Rationale**: Establish professional-grade development infrastructure with automated testing, linting, and multi-channel builds (stable/nightly/dev) to support rapid iteration while maintaining production quality.
+
+---
+
 ## v0.1.0d-6 (preview) - November 21, 2025
 
 **Documentation Pruning & Consolidation**

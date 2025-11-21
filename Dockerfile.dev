@@ -1,0 +1,52 @@
+# Development Dockerfile with hot-reload and debugging
+# Build: docker build -f Dockerfile.dev -t crecall:dev .
+# Run: docker run -p 8000:8000 -p 5173:5173 -v $(pwd):/app crecall:dev
+
+FROM python:3.11-slim
+
+# Install development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    vim \
+    nodejs \
+    npm \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20.x
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
+WORKDIR /app
+
+# Install Python dev dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    sqlalchemy \
+    alembic \
+    python-multipart \
+    pytest \
+    pytest-cov \
+    black \
+    pylint \
+    mypy \
+    ipython \
+    debugpy
+
+# Development environment variables
+ENV PYTHONUNBUFFERED=1
+ENV CRECALL_ENV=development
+ENV CRECALL_DEBUG=1
+
+# Expose ports
+EXPOSE 8000 5173 5678
+
+# Volume for source code
+VOLUME ["/app"]
+
+# Default command (can be overridden)
+CMD ["bash", "-c", "cd /app/backend && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload & cd /app/frontend && npm install && npm run dev -- --host 0.0.0.0"]

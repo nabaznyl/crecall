@@ -1,0 +1,99 @@
+# Multi-stage Dockerfile for crecall
+# Build: docker build -t crecall:latest .
+# Run: docker run -p 8000:8000 -v ~/.recall_memory:/root/.recall_memory crecall:latest
+
+ARG BUILD_CHANNEL=stable
+ARG PYTHON_VERSION=3.11
+ARG NODE_VERSION=20
+
+# ============================================================================
+# Stage 1: Backend Builder
+# ============================================================================
+FROM python:${PYTHON_VERSION}-slim as backend-builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy backend files
+COPY backend/pyproject.toml backend/poetry.lock* ./
+COPY backend/app ./app
+COPY backend/alembic.ini ./
+COPY backend/migrations ./migrations
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev --no-interaction --no-ansi || \
+    pip install --no-cache-dir fastapi uvicorn sqlalchemy alembic python-multipart
+
+# ============================================================================
+# Stage 2: Frontend Builder
+# ============================================================================
+FROM node:${NODE_VERSION}-alpine as frontend-builder
+
+WORKDIR /build
+
+# Copy frontend files
+COPY frontend/package*.json ./
+COPY frontend/tsconfig.json ./
+COPY frontend/vite.config.ts ./
+COPY frontend/index.html ./
+COPY frontend/src ./src
+COPY frontend/public ./public
+
+# Install dependencies and build
+RUN npm ci --quiet && \
+    npm run build
+
+# ============================================================================
+# Stage 3: Production Image
+# ============================================================================
+FROM python:${PYTHON_VERSION}-slim
+
+LABEL maintainer="crecall developers"
+LABEL description="crecall - Continuous Recall Memory System"
+LABEL version="${BUILD_CHANNEL}"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd -m -u 1000 -s /bin/bash crecall
+
+WORKDIR /app
+
+# Copy backend from builder
+COPY --from=backend-builder /build /app/backend
+COPY --from=backend-builder /usr/local/lib/python${PYTHON_VERSION}/site-packages /usr/local/lib/python${PYTHON_VERSION}/site-packages
+COPY --from=backend-builder /usr/local/bin /usr/local/bin
+
+# Copy frontend from builder
+COPY --from=frontend-builder /build/dist /app/frontend/dist
+
+# Copy CLI binaries
+COPY bin/crecall /usr/local/bin/crecall
+COPY bin/crecall-recover /usr/local/bin/crecall-recover
+RUN chmod +x /usr/local/bin/crecall /usr/local/bin/crecall-recover
+
+# Create data directory
+RUN mkdir -p /root/.recall_memory && \
+    chown -R crecall:crecall /root/.recall_memory
+
+# Expose backend port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/ || exit 1
+
+# Default command
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
