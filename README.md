@@ -1,6 +1,7 @@
 # crecall - Session Recall and Transcript Tool
 
-**Current Version:** v0.1.0d-7 (preview)  
+**Current Version:** v0.1.0d-7 (dev)  
+**Last Packaged Release:** v0.1.0-prealpha (2025-11-21)  
 **Status:** Active Development - Professional Build Infrastructure Ready!  
 **UI Theme:** Default Dark Mode (toggleable light mode) • Settings menu available  
 **Build Channels:** Stable | Nightly | Dev
@@ -8,6 +9,8 @@
 Session continuity and checkpoint logging with encryption, pause/resume semantics, and **intelligent memory management**.
 
 **Data Directory:** `~/.recall_memory` (auto-migrates from `~/.recall_chat` or `~/.chat_recall`)
+
+> **Note:** v0.1.0-prealpha is the latest source release tarball (see `backups/prealpha-20251121/`). v0.1.0d-7 represents ongoing development on `main` branch with testing framework, updated documentation, and additional refinements.
 
 > **See:** 
 > - [PATCH_NOTES.md](PATCH_NOTES.md) for detailed version history
@@ -593,7 +596,10 @@ TBD - Project license to be determined
 ---
 
 **Built to solve real problems. Designed to never lose your place again.**
-## Database
+
+---
+
+## 🗄️ Database Configuration
 
 By default crecall uses SQLite (`sqlite+aiosqlite:///crecall.db`) for simplicity. For production scenarios or higher concurrency you can switch to PostgreSQL.
 
@@ -634,5 +640,3 @@ These improve retention pruning scans, timeline listings, and importance filteri
 
 ### Rollback
 To revert to SQLite simply unset `POSTGRES_URL` and restart (ensure no in-flight migrations rely on PostgreSQL-only features first).
-
-# Test change
