@@ -351,7 +351,7 @@ git push origin feature/my-feature
 bdf24a9 feat: Add React frontend scaffold
 95a5be9 feat: Add FastAPI backend scaffold
 90131c5 docs: Add architecture and development guides
-053b20c Initial commit: crecall v0.1.0d-2
+053b20c Initial commit: crecall v0.1.0d-2 (preview)
 ```
 
 ---

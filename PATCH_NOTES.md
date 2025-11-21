@@ -360,7 +360,7 @@ Version history and changelog in checklist format.
 ## Version Numbering
 
 - **Format**: `vMAJOR.MINOR.PATCH-BUILD(preview)`
-- **Current**: `v0.1.0d-2(preview)`
+- **Current**: `v0.1.0d-2 (preview)`
 - **Patch increments** indicate bug fixes or minor changes within same feature set
 - **Build number** (`-1`, `-2`) tracks Debian package iterations
 - **Preview tag** remains until stable release (v1.0.0)

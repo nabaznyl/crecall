@@ -3,7 +3,8 @@ Memory service - business logic for memories.
 """
 
 from typing import List, Optional
-from sqlalchemy import select, delete, or_
+from datetime import datetime, timedelta
+from sqlalchemy import select, delete, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Memory, Session as SessionModel
@@ -113,13 +114,84 @@ class MemoryService:
     async def search_memories(
         self,
         query: str,
-        limit: int = 20
+        limit: int = 20,
+        category: Optional[str] = None,
+        min_importance: Optional[int] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        tags: Optional[List[str]] = None
     ) -> List[Memory]:
-        """Full-text search across memories."""
-        result = await self.db.execute(
-            select(Memory)
-            .where(Memory.content.ilike(f"%{query}%"))
-            .order_by(Memory.created_at.desc())
-            .limit(limit)
-        )
+        """
+        Advanced full-text search across memories with filtering.
+        
+        Args:
+            query: Search text (searches in content)
+            limit: Maximum results to return
+            category: Filter by category
+            min_importance: Minimum importance level (1-5)
+            date_from: Filter memories created after this date
+            date_to: Filter memories created before this date
+            tags: Filter by tags (matches any tag in list)
+        """
+        # Build base query
+        stmt = select(Memory)
+        
+        # Text search
+        if query:
+            stmt = stmt.where(Memory.content.ilike(f"%{query}%"))
+        
+        # Category filter
+        if category:
+            stmt = stmt.where(Memory.category == category)
+        
+        # Importance filter
+        if min_importance is not None:
+            stmt = stmt.where(Memory.importance >= min_importance)
+        
+        # Date range filter
+        if date_from:
+            stmt = stmt.where(Memory.created_at >= date_from)
+        if date_to:
+            stmt = stmt.where(Memory.created_at <= date_to)
+        
+        # Tags filter (SQLite JSON support is limited, so we'll do basic containment)
+        # For production with PostgreSQL, use proper JSON operators
+        if tags:
+            tag_conditions = []
+            for tag in tags:
+                # This works for SQLite with JSON stored as text
+                tag_conditions.append(Memory.tags.cast(str).ilike(f"%{tag}%"))
+            if tag_conditions:
+                stmt = stmt.where(or_(*tag_conditions))
+        
+        # Order by relevance (most recent first, then by importance)
+        stmt = stmt.order_by(Memory.importance.desc(), Memory.created_at.desc())
+        stmt = stmt.limit(limit)
+        
+        result = await self.db.execute(stmt)
         return result.scalars().all()
+    
+    async def get_categories(self) -> List[str]:
+        """Get list of unique categories."""
+        result = await self.db.execute(
+            select(Memory.category).distinct().where(Memory.category.isnot(None))
+        )
+        return [cat for cat in result.scalars().all() if cat]
+    
+    async def get_popular_tags(self, limit: int = 20) -> List[dict]:
+        """Get most frequently used tags."""
+        # This is a simplified version for SQLite
+        # For production, use proper JSON aggregation
+        result = await self.db.execute(
+            select(Memory.tags).where(Memory.tags.isnot(None))
+        )
+        
+        tag_counts = {}
+        for tags_json in result.scalars().all():
+            if tags_json and isinstance(tags_json, list):
+                for tag in tags_json:
+                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        
+        # Sort by count and return top N
+        sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+        return [{"tag": tag, "count": count} for tag, count in sorted_tags]

@@ -26,7 +26,7 @@ Session continuity and checkpoint logging with encryption, pause/resume semantic
 
 ## ✨ New Updates & Features
 
-### 🆕 Latest (v0.1.0d-2)
+### 🆕 Latest (v0.1.0d-2 (preview))
 - ✅ **Dash-Only Commands**: All commands now require `--` or `-` prefix for clarity
 - ✅ **Short Flags**: Quick access with single-character flags (`-s`, `-m`, `-r`, etc.)
 - ✅ **Improved Error Messages**: Better guidance when commands are incorrect
@@ -226,7 +226,7 @@ crecall --help
 
 ## 🏗️ Architecture
 
-### Current: CLI Wrapper (v0.1.0d-2)
+### Current: CLI Wrapper (v0.1.0d-2 (preview))
 
 - Bash-based unified command dispatcher
 - Local file storage (JSON-lines format)
@@ -341,7 +341,7 @@ User Action → CLI/Web UI → Python API → PostgreSQL
 
 ### File Structure Evolution
 
-**Current (v0.1.0d-2)**:
+**Current (v0.1.0d-2 (preview))**:
 ```
 ~/.recall_memory/
   recall.log              # JSON-lines checkpoints
@@ -380,7 +380,7 @@ All dependencies auto-installed via APT.
 
 ## 📝 Preview Build Notice
 
-This is **preview version v0.1.0d-2**. Future updates will increment version numbers following semantic versioning.
+This is **preview version v0.1.0d-2 (preview)**. Future updates will increment version numbers following semantic versioning.
 
 **Memory features** are under active development and will be the flagship capability of crecall. The tool is designed to ensure you never lose context due to crashes, restarts, or interruptions.
 

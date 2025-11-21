@@ -373,7 +373,7 @@ data_clear() {
 
 show_help() {
 cat <<'HELP'
-crecall - Session Recall & Memory Management v0.1.0d-2
+crecall - Session Recall & Memory Management v0.1.0d-2 (preview)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📋 SESSION COMMANDS

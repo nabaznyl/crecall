@@ -4,8 +4,7 @@ Clips API endpoints.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
-
+from typing import List, Optional
 from app.db.session import get_db
 from app.schemas.clip import ClipCreate, ClipResponse, ClipList
 from app.services.clip_service import ClipService
@@ -25,12 +24,12 @@ async def create_clip(
 
 
 @router.get("/", response_model=List[ClipList])
+@router.get("/", response_model=List[ClipList])
 async def list_clips(
-    session_id: str = None,
+    session_id: Optional[str] = None,
     limit: int = 10,
     db: AsyncSession = Depends(get_db)
 ):
-    """List clips, optionally filtered by session."""
     service = ClipService(db)
     clips = await service.list_clips(session_id=session_id, limit=limit)
     return clips
@@ -63,7 +62,7 @@ async def delete_clip(
 @router.post("/prune")
 async def prune_clips(
     keep_last: int = 100,
-    older_than_days: int = None,
+    older_than_days: Optional[int] = None,
     db: AsyncSession = Depends(get_db)
 ):
     """Prune old clips based on retention policy."""
