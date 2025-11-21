@@ -175,7 +175,7 @@ memory_add() {
     
     json_data="$json_data}"
     
-    local response=$(api_call POST /memories \
+    local response=$(api_call POST /api/memories \
       -H "Content-Type: application/json" \
       -d "$json_data")
     
