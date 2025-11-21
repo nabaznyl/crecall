@@ -55,9 +55,11 @@ RUN npm ci --quiet && \
 # ============================================================================
 FROM python:${PYTHON_VERSION}-slim
 
-LABEL maintainer="crecall developers"
-LABEL description="crecall - Continuous Recall Memory System"
-LABEL version="${BUILD_CHANNEL}"
+LABEL org.opencontainers.image.title="crecall"
+LABEL org.opencontainers.image.description="Continuous Recall Memory System"
+LABEL org.opencontainers.image.source="https://github.com/crecall/crecall"
+LABEL org.opencontainers.image.version="${BUILD_CHANNEL}"
+LABEL org.opencontainers.image.licenses="Proprietary"
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -91,9 +93,9 @@ RUN mkdir -p /root/.recall_memory && \
 # Expose backend port
 EXPOSE 8000
 
-# Health check
+# Health check (API + docs availability)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl -fs http://localhost:8000/health && curl -fs http://localhost:8000/docs >/dev/null || exit 1
 
 # Default command
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

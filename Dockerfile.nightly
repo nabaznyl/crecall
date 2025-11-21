@@ -24,9 +24,11 @@ RUN npm ci && npm run build
 
 FROM python:${PYTHON_VERSION}-slim
 
-LABEL maintainer="crecall developers"
-LABEL description="crecall Nightly Build"
-LABEL version="nightly"
+LABEL org.opencontainers.image.title="crecall"
+LABEL org.opencontainers.image.description="Nightly build - Continuous Recall Memory System"
+LABEL org.opencontainers.image.source="https://github.com/crecall/crecall"
+LABEL org.opencontainers.image.version="nightly"
+LABEL org.opencontainers.image.licenses="Proprietary"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl git ca-certificates \
@@ -45,6 +47,6 @@ RUN chmod +x /usr/local/bin/crecall* && \
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl -fs http://localhost:8000/health && curl -fs http://localhost:8000/docs >/dev/null || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

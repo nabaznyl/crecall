@@ -107,7 +107,8 @@ class QueryOptimizer:
             .group_by(Clip.session_id)
         )
         result = db.execute(stmt)
-        return dict(result.all())
+        rows = result.all()
+        return {row[0]: row[1] for row in rows}
 
     @staticmethod
     def search_memories_optimized(

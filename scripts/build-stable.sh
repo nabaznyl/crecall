@@ -37,11 +37,25 @@ mkdir -p "$BUILD_DIR" "$DIST_DIR"
 # Build backend
 echo -e "\n${YELLOW}Building backend...${NC}"
 cd "$PROJECT_ROOT/backend"
+
+# Create virtual environment if it doesn't exist
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+fi
+
+# Activate venv and install dependencies
+source venv/bin/activate
+
+# Install build tools
+pip install --upgrade pip build wheel 2>&1 | grep -v "Requirement already satisfied" || true
+
 if [ -f "pyproject.toml" ]; then
-    python3 -m pip install build --quiet
     python3 -m build --outdir "$DIST_DIR"
     echo -e "${GREEN}✓ Backend wheel built${NC}"
 fi
+
+deactivate
 
 # Build frontend
 echo -e "\n${YELLOW}Building frontend...${NC}"

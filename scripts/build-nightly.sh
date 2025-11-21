@@ -41,8 +41,18 @@ sed -i.bak "s/\"version\": \".*\"/\"version\": \"${NIGHTLY_VERSION}\"/" "$PROJEC
 # Build backend
 echo -e "\n${YELLOW}Building backend...${NC}"
 cd "$PROJECT_ROOT/backend"
-python3 -m pip install build --quiet 2>/dev/null || true
+
+# Create virtual environment if it doesn't exist
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+fi
+
+source venv/bin/activate
+pip install --upgrade pip build wheel 2>&1 | grep -v "Requirement already satisfied" || true
 python3 -m build --outdir "$DIST_DIR" 2>&1 | grep -v "warning" || true
+deactivate
+
 echo -e "${GREEN}✓ Backend built${NC}"
 
 # Build frontend

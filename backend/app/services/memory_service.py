@@ -8,6 +8,7 @@ from sqlalchemy import select, delete, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Memory, Session as SessionModel
+from app.services.websocket_manager import broadcast_event
 from app.schemas.memory import MemoryCreate, MemoryUpdate
 
 
@@ -43,6 +44,11 @@ class MemoryService:
         self.db.add(memory)
         await self.db.commit()
         await self.db.refresh(memory)
+
+        try:
+            await broadcast_event("memory.created", {"memory_id": memory.id, "session_id": memory.session_id})
+        except Exception:
+            pass
         
         return memory
     
@@ -101,15 +107,21 @@ class MemoryService:
         
         await self.db.commit()
         await self.db.refresh(memory)
+        try:
+            await broadcast_event("memory.updated", {"memory_id": memory.id})
+        except Exception:
+            pass
         
         return memory
     
     async def delete_memory(self, memory_id: int) -> None:
         """Delete a memory."""
-        await self.db.execute(
-            delete(Memory).where(Memory.id == memory_id)
-        )
+        await self.db.execute(delete(Memory).where(Memory.id == memory_id))
         await self.db.commit()
+        try:
+            await broadcast_event("memory.deleted", {"memory_id": memory_id})
+        except Exception:
+            pass
     
     async def search_memories(
         self,

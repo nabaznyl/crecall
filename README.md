@@ -593,4 +593,46 @@ TBD - Project license to be determined
 ---
 
 **Built to solve real problems. Designed to never lose your place again.**
+## Database
+
+By default crecall uses SQLite (`sqlite+aiosqlite:///crecall.db`) for simplicity. For production scenarios or higher concurrency you can switch to PostgreSQL.
+
+### Switching to PostgreSQL
+1. Create a PostgreSQL database and user with appropriate privileges.
+2. Install an async driver: `pip install asyncpg` (and optionally `psycopg2-binary` for migration script use).
+3. Export `POSTGRES_URL` (preferred) or override `DATABASE_URL`:
+   ```bash
+   export POSTGRES_URL=postgresql+asyncpg://user:pass@localhost:5432/crecall
+   ```
+4. Run migrations (initial schema + future upgrades):
+   ```bash
+   alembic upgrade head
+   ```
+5. (Optional) Migrate existing SQLite data:
+   ```bash
+   python backend/scripts/migrate_to_postgres.py \
+       --sqlite sqlite:///crecall.db \
+       --postgres postgresql+psycopg2://user:pass@localhost:5432/crecall
+   ```
+6. Start the application – session creation and queries will use PostgreSQL automatically.
+
+### Performance-Oriented Indexes
+The schema defines composite and selective indexes to accelerate common operations:
+| Table | Index |
+|-------|-----------------------------|
+| sessions | (status, created_at) |
+| clips | (session_id, created_at) |
+| memories | (session_id, created_at), (importance) |
+| checkpoints | (session_id, created_at) |
+
+These improve retention pruning scans, timeline listings, and importance filtering with predictable latency.
+
+### Migration Notes
+- The data copy utility skips tables already populated to prevent duplicates.
+- Run migrations before data copy to ensure schema exists.
+- Large datasets: consider running with increased `work_mem` and batching logic (future enhancement).
+
+### Rollback
+To revert to SQLite simply unset `POSTGRES_URL` and restart (ensure no in-flight migrations rely on PostgreSQL-only features first).
+
 # Test change

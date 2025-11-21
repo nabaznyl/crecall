@@ -2,12 +2,18 @@
 Main FastAPI application entry point.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.core.config import settings
 from app.api import clips, memories, sessions, context_router
+from app.api import clipped as clipped_router
+from app.api import export_import
+from app.middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware, RequestIDMiddleware
+from app.services.metrics import metrics
+from fastapi import APIRouter, Response
 from app.services.auto_save import start_auto_save, stop_auto_save
 from app.services.crash_detector import CrashDetector
 from app.db.session import AsyncSessionLocal
@@ -40,11 +46,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Security middleware stack
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
 # Include routers
 app.include_router(clips.router, prefix="/api/clips", tags=["clips"])
+app.include_router(clipped_router.router, prefix="/api/clipped", tags=["clipped"])
 app.include_router(memories.router, prefix="/api/memories", tags=["memories"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
 app.include_router(context_router, prefix="/api/context", tags=["context"])
+app.include_router(export_import.router)
+
+# Documentation / OpenAPI router additions
+docs_router = APIRouter()
+
+@docs_router.get("/openapi.json", include_in_schema=False)
+async def openapi_json():
+    """Return the live OpenAPI schema (for packaging/export)."""
+    return JSONResponse(app.openapi())
+
+@docs_router.get("/docs/ping", include_in_schema=False)
+async def docs_ping():  # simple health for docs packaging
+    return {"ok": True}
+
+app.include_router(docs_router)
+
+# Metrics endpoint (read-only)
+metrics_router = APIRouter()
+
+@metrics_router.get("/api/metrics", tags=["system"], summary="System metrics snapshot")
+async def metrics_snapshot():
+    return metrics.snapshot()
+
+@metrics_router.get("/metrics/prom", include_in_schema=False)
+async def metrics_prom():
+    return Response(metrics.prometheus(), media_type="text/plain; version=0.0.4")
+
+app.include_router(metrics_router)
 
 
 @app.get("/")

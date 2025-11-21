@@ -28,7 +28,18 @@ pytz==2025.1
 # Development
 pytest==8.3.4
 pytest-asyncio==0.24.0
+pytest-cov==6.0.0  # Coverage reporting
 httpx==0.28.1  # For testing async endpoints
 black==25.1.0
 ruff==0.9.2
 mypy==1.14.1
+
+# Optional: Semantic Search & Caching
+# Uncomment to enable advanced features
+# sentence-transformers==2.3.1  # Semantic search
+# faiss-cpu==1.7.4  # Vector similarity search (or faiss-gpu for CUDA)
+# redis==5.0.1  # Caching layer
+# numpy==1.26.3  # Required for embeddings
+
+# Optional: Remote Sync (SSH/SFTP)
+# paramiko==3.5.0  # SSH/SFTP client for remote synchronization

@@ -539,6 +539,8 @@ main() {
     -p|--pause) cmd="pause";;
     -m|--memory) cmd="memory";;
     -c|--clip) cmd="clip";;
+    --clipped|clipped) cmd="clipped";;
+    sync) cmd="sync";;
     -e|--encrypt) cmd="encrypt";;
     -d|--decrypt) cmd="decrypt";;
     --cache) cmd="cache";;
@@ -568,7 +570,23 @@ main() {
         search) memory_search "$@" ;;
         *) echo 'Invalid memory subcommand. Use: memory add|list|clear|resume|search'; exit 1;;
       esac ;;
-    clip)
+    clip|clipped)
+          sync)
+            local sub="${1:-}"; shift || true
+            case "$sub" in
+              push)
+                local host="${1:-}"; test -n "$host" || { echo 'Host required: crecall sync push <host>'; exit 1; }
+                echo '[crecall] Pushing bundle to remote...'
+                curl -s -X POST "$API_URL/portable/push-remote?host=$host" | python3 -m json.tool 2>/dev/null || true
+                ;;
+              pull)
+                local host="${1:-}"; test -n "$host" || { echo 'Host required: crecall sync pull <host>'; exit 1; }
+                echo '[crecall] Pulling bundle from remote...'
+                curl -s -X POST "$API_URL/portable/pull-remote?host=$host" | python3 -m json.tool 2>/dev/null || true
+                ;;
+              *) echo 'Invalid sync subcommand. Use: sync push|pull <host>'; exit 1;;
+            esac
+            ;;
       local sub="${1:-}"
       shift || true
       case "$sub" in

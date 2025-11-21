@@ -10,7 +10,9 @@ from alembic import context
 
 # Interpret the config file for Python logging.
 config = context.config
-fileConfig(config.config_file_name)
+# Only configure logging if a config file is present
+if config.config_file_name:
+    fileConfig(config.config_file_name)
 
 # Database URL override
 db_url = os.getenv("DATABASE_URL")
@@ -30,8 +32,10 @@ def run_migrations_offline():
         context.run_migrations()
 
 def run_migrations_online():
+    # Protect against None being returned; Alembic types expect a dict
+    section = config.get_section(config.config_ini_section) or {}
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

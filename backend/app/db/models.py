@@ -3,7 +3,7 @@ Database models for crecall.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -13,6 +13,9 @@ class Session(Base):
     """Session model - represents a work session."""
     
     __tablename__ = "sessions"
+    __table_args__ = (
+        Index("ix_sessions_status_created", "status", "created_at"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(100), unique=True, index=True, nullable=False)
@@ -31,6 +34,9 @@ class Clip(Base):
     """Clip model - lightweight restore point."""
     
     __tablename__ = "clips"
+    __table_args__ = (
+        Index("ix_clips_session_created", "session_id", "created_at"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     clip_id = Column(String(100), unique=True, index=True, nullable=False)
@@ -57,6 +63,10 @@ class Memory(Base):
     """Memory model - tagged memory items."""
     
     __tablename__ = "memories"
+    __table_args__ = (
+        Index("ix_memories_session_created", "session_id", "created_at"),
+        Index("ix_memories_importance", "importance"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False)
@@ -83,6 +93,9 @@ class Checkpoint(Base):
     """Checkpoint model - full checkpoint data."""
     
     __tablename__ = "checkpoints"
+    __table_args__ = (
+        Index("ix_checkpoints_session_created", "session_id", "created_at"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False)
