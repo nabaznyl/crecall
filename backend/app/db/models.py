@@ -19,6 +19,7 @@ class Session(Base):
     status = Column(String(20), default="active")  # active, paused, archived
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    theme_preference = Column(String(10), default="dark")  # placeholder per-user theme
     
     # Relationships
     clips = relationship("Clip", back_populates="session", cascade="all, delete-orphan")

@@ -24,7 +24,6 @@ async def create_clip(
 
 
 @router.get("/", response_model=List[ClipList])
-@router.get("/", response_model=List[ClipList])
 async def list_clips(
     session_id: Optional[str] = None,
     limit: int = 10,

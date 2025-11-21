@@ -1,3 +1,15 @@
+crecall (0.1.0d-6) unstable; urgency=medium
+
+  * Documentation pruning and consolidation
+  * Version synchronization across all components
+  * Complete TODOs in crash recovery utility
+  * Add Alembic migration infrastructure
+  * Interactive settings menu with config persistence
+  * Theme toggle and OS preference detection
+  * Security protocols and license documentation
+
+ -- Local Maintainer <maintainer@example.com>  Thu, 21 Nov 2025 10:00:00 +0000
+
 crecall (0.1.0d-2) unstable; urgency=medium
 
   * Enforce dash-prefixed commands only

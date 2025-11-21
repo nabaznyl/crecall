@@ -1,7 +1,8 @@
 # crecall - Session Recall and Transcript Tool
 
-**Current Version:** v0.1.0d-2 (preview)  
+**Current Version:** v0.1.0d-6 (preview)  
 **Status:** Active Development - Memory Features Coming Soon!
+**UI Theme:** Default Dark Mode (toggleable light mode) • Settings menu available
 
 Session continuity and checkpoint logging with encryption, pause/resume semantics, and **intelligent memory management**.
 
@@ -167,6 +168,14 @@ crecall --data clear
 crecall --version
 crecall -v
 crecall --help
+
+# Toggle UI theme (web dashboard)
+# Default is dark mode; click the "Light Mode" / "Dark Mode" button in header.
+# Preference persists in localStorage under key: crecall-theme
+
+# Open settings menu (interactive)
+crecall --settings
+crecall -o
 ```
 
 ---
@@ -182,6 +191,8 @@ crecall --help
 - ✅ **Cache Pruning**: Keep last N entries, dry-run preview
 - ✅ **Data Migration**: Auto-migrates from legacy directories on first run
 - ✅ **Short Flags**: Single-character alternatives for all commands
+- ✅ **Theme Toggle**: Switch between dark and light modes (default dark, persisted)
+- ✅ **Settings Menu**: Interactive CLI config for auto-save, clip retention, theme, auto-clip
 
 ### Planned Capabilities
 
@@ -384,6 +395,18 @@ This is **preview version v0.1.0d-2 (preview)**. Future updates will increment v
 
 **Memory features** are under active development and will be the flagship capability of crecall. The tool is designed to ensure you never lose context due to crashes, restarts, or interruptions.
 
+### Theme Toggle (Preview)
+The web interface now includes a theme toggle button in the header. Dark mode is the default on first load. The selection is stored in `localStorage` (`crecall-theme`) and applied automatically on future visits. This will later integrate with OS-level preferences and possibly per-session styling.
+
+### Settings Menu (Preview)
+Run `crecall --settings` (or `-o`) to adjust:
+- Auto-save interval (minutes)
+- Clip retention (keep last N clips)
+- Theme preference (dark/light) – stored separately from frontend localStorage
+- Auto-clip enable flag (future integration)
+
+Configuration stored at: `~/.recall_memory/config.json` and created if missing.
+
 ---
 
 ## ❓ Questions & Feedback
@@ -433,6 +456,8 @@ We're actively shaping crecall's future. Your input matters:
 
 ## 📚 Documentation
 
+   • SECURITY_PROTOCOLS.md (hardening roadmap)
+   • BRAND_LICENSE_AGREEMENT.md (protective license draft)
 - **Installation Guide**: See [INSTALL.md](INSTALL.md)
 - **Version History**: See [PATCH_NOTES.md](PATCH_NOTES.md)
 - **API Documentation**: Coming soon with Python backend

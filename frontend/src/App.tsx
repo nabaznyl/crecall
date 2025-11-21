@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SessionDashboard } from './components/SessionDashboard'
 import { ClipBrowser } from './components/ClipBrowser'
 import { MemoryList } from './components/MemoryList'
@@ -10,6 +10,39 @@ type Tab = 'dashboard' | 'clips' | 'memories' | 'search'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('crecall-theme') : null
+    if (stored) return stored === 'dark'
+    // Default dark; if user prefers dark via OS keep dark, if prefers light still default dark per spec
+    try {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      return prefersDark || true
+    } catch {
+      return true
+    }
+  })
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (isDark) {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+    localStorage.setItem('crecall-theme', isDark ? 'dark' : 'light')
+  }, [isDark])
+
+  useEffect(() => {
+    // Listen for OS changes only if user hasn't manually chosen (no stored preference yet)
+    const stored = localStorage.getItem('crecall-theme')
+    if (stored) return
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e: MediaQueryListEvent) => {
+      setIsDark(e.matches || true) // keep dark default
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,6 +60,13 @@ function App() {
               <div className="px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">
                 Connected
               </div>
+              <Button
+                variant="outline"
+                onClick={() => setIsDark(d => !d)}
+                className="text-xs"
+              >
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </Button>
             </div>
           </div>
         </div>

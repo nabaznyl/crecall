@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-VERSION="v0.1.0d-2(preview)"
+VERSION="v0.1.0d-6 (preview)"
 DATA_HOME="$HOME/.recall_memory"
 LOG_FILE="$DATA_HOME/recall.log"
 STATE_FILE="$DATA_HOME/state.json"
@@ -373,7 +373,7 @@ data_clear() {
 
 show_help() {
 cat <<'HELP'
-crecall - Session Recall & Memory Management v0.1.0d-2 (preview)
+crecall - Session Recall & Memory Management v0.1.0d-6 (preview)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📋 SESSION COMMANDS
@@ -463,6 +463,7 @@ crecall - Session Recall & Memory Management v0.1.0d-2 (preview)
   crecall -h                         [Short form]
   
   crecall --settings                 Settings menu (coming soon)
+  crecall -o                         [Short form]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 Tips & Notes
@@ -545,6 +546,7 @@ main() {
     -x|--state) cmd="state";;
     -v|--version) cmd="version";;
     -h|--help|--usage) cmd="help";;
+    -o|--settings) cmd="settings";;
     *) echo 'Invalid command. Use "crecall --help" for more information.'; exit 1;;
   esac
   shift || true
@@ -588,8 +590,68 @@ main() {
     state) cat "$STATE_FILE" 2>/dev/null || echo '{}' ;;
     version) echo "$VERSION" ;;
     help) show_help ;;
+    settings) settings_menu ;;
     *) echo 'Invalid command. Use "crecall --help" for more information.'; exit 1 ;;
   esac
+}
+
+CONFIG_FILE="$DATA_HOME/config.json"
+
+load_config() {
+  if [ -f "$CONFIG_FILE" ]; then
+    CONFIG_JSON=$(cat "$CONFIG_FILE")
+  else
+    CONFIG_JSON='{"auto_save_minutes":5,"clip_keep_last":100,"theme":"dark","enable_auto_clip":false}'
+    echo "$CONFIG_JSON" > "$CONFIG_FILE"
+  fi
+}
+
+save_config() {
+  echo "$CONFIG_JSON" > "$CONFIG_FILE"
+  echo "[crecall] Config saved: $CONFIG_FILE"
+}
+
+set_config_field() {
+  local field="$1" val="$2"
+  CONFIG_JSON=$(python3 - "$field" "$val" <<'PY'
+import sys, json
+field, val = sys.argv[1:3]
+cfg = json.loads(sys.stdin.read())
+# type inference
+if val.lower() in {"true","false"}:
+    v = val.lower() == "true"
+else:
+    try:
+        v = int(val)
+    except ValueError:
+        v = val
+cfg[field] = v
+print(json.dumps(cfg))
+PY
+)
+}
+
+settings_menu() {
+  load_config
+  echo "━━━━━━━━ SETTINGS ━━━━━━━━"
+  echo "Current configuration:"
+  echo "$CONFIG_JSON" | python3 -m json.tool 2>/dev/null || echo "$CONFIG_JSON"
+  echo "Select option to modify:";
+  echo " 1) Auto-save interval (minutes)"
+  echo " 2) Clip retention (keep last N)"
+  echo " 3) Theme (dark/light)"
+  echo " 4) Enable auto-clip (true/false)"
+  echo " 5) Cancel"
+  read -r choice
+  case "$choice" in
+    1) echo "Enter minutes:"; read -r v; set_config_field auto_save_minutes "$v";;
+    2) echo "Enter N:"; read -r v; set_config_field clip_keep_last "$v";;
+    3) echo "Enter theme (dark/light):"; read -r v; set_config_field theme "$v";;
+    4) echo "Enable auto-clip (true/false):"; read -r v; set_config_field enable_auto_clip "$v";;
+    5) echo "Cancelled"; return 0;;
+    *) echo "Invalid"; return 1;;
+  esac
+  save_config
 }
 
 main "$@"

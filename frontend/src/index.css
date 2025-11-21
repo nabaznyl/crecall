@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-.dark,
+/* Light theme (default) */
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -24,6 +24,7 @@
   --radius: 0.5rem;
 }
 
+/* Dark theme overrides */
 .dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
@@ -56,12 +57,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-}
-
-/* Force dark theme by default */
-body {
-  background-color: hsl(222.2 84% 4.9%);
-  color: hsl(210 40% 98%);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .card-dark {

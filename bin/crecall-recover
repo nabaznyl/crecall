@@ -62,17 +62,36 @@ def main():
         
         if choice == "1":
             print("\n🔄 Restoring from last clip...")
-            # TODO: Implement actual restore logic
-            print(f"Would restore clip: {crash_data.get('last_clip_id')}")
-            print("✓ Recovery complete!")
-            CrashDetector.clear_crash_marker()
-            return 0
+            clip_id = crash_data.get('last_clip_id')
+            if clip_id:
+                import subprocess
+                result = subprocess.run(
+                    ['crecall', '-c', 'resume', str(clip_id)],
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    print("✓ Recovery complete!")
+                    CrashDetector.clear_crash_marker()
+                    return 0
+                else:
+                    print(f"✗ Restore failed: {result.stderr}")
+                    return 1
+            else:
+                print("✗ No clip ID available for restore")
+                return 1
         
         elif choice == "2":
             print("\n📂 Available clips:")
-            # TODO: List clips from database
-            print(f"  - {crash_data.get('last_clip_id')} (latest)")
-            print("\nUse 'crecall --clip ls' for full list")
+            import subprocess
+            result = subprocess.run(
+                ['crecall', '-c', 'list', '10'],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                print(result.stdout)
+            else:
+                print(f"Latest clip: {crash_data.get('last_clip_id')}")
+                print("\nUse 'crecall --clip ls' for full list")
             return 0
         
         elif choice == "3":

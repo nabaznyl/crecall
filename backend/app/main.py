@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.core.config import settings
-from app.api import clips, memories, sessions
+from app.api import clips, memories, sessions, context_router
 from app.services.auto_save import start_auto_save, stop_auto_save
 from app.services.crash_detector import CrashDetector
 from app.db.session import AsyncSessionLocal
@@ -26,7 +26,7 @@ crash_detector = CrashDetector()
 app = FastAPI(
     title="crecall API",
     description="Session recall and memory management system",
-    version="0.1.0",
+    version="0.1.0d-6 (preview)",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -44,6 +44,7 @@ app.add_middleware(
 app.include_router(clips.router, prefix="/api/clips", tags=["clips"])
 app.include_router(memories.router, prefix="/api/memories", tags=["memories"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
+app.include_router(context_router, prefix="/api/context", tags=["context"])
 
 
 @app.get("/")
@@ -51,7 +52,7 @@ async def root():
     """Root endpoint - API health check."""
     return {
         "message": "crecall API",
-        "version": "0.1.0",
+        "version": "0.1.0d-6 (preview)",
         "status": "active",
         "docs": "/docs",
     }

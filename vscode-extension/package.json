@@ -1,8 +1,8 @@
 {
   "name": "crecall",
-  "displayName": "Crecall - Session Recall & Memory",
+  "displayName": "Crecall - Session Recall & Memory (preview)",
   "description": "Never lose development context. Instant recall of clips and memories.",
-  "version": "0.1.0",
+  "version": "0.1.0d-6",
   "publisher": "crecall-dev",
   "repository": {
     "type": "git",

@@ -74,6 +74,7 @@ debian/.debhelper/
 *.deb
 *.buildinfo
 *.changes
+archives/debian-builds/
 
 # crecall specific
 .recall_memory/
