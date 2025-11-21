@@ -42,6 +42,9 @@ yarn-error.log*
 .pnp.js
 coverage/
 build/
+build-nightly/
+dist/
+dist-nightly/
 .DS_Store
 .env.local
 .env.development.local
@@ -89,6 +92,9 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Profiling
+profiles/
 
 # Temporary files
 tmp/
