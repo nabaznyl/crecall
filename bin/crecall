@@ -7,6 +7,20 @@ STATE_FILE="$DATA_HOME/state.json"
 MEMORY_FILE="$DATA_HOME/recall_memory.log"
 TRANSCRIPTS_DIR="$DATA_HOME/transcripts"
 PASSPHRASE_FILE="$DATA_HOME/passphrase"
+API_URL="${CRECALL_API_URL:-http://localhost:8000/api}"
+
+# Check if API is available
+api_available() {
+  curl -s -f "${API_URL/\/api/}/health" >/dev/null 2>&1
+}
+
+# Call API endpoint
+api_call() {
+  local method="$1"
+  local endpoint="$2"
+  shift 2
+  curl -s -X "$method" "$API_URL$endpoint" "$@"
+}
 
 json_escape() {
   local s="$1"
@@ -111,10 +125,66 @@ decrypt_file() {
 }
 
 memory_add() {
-  local item="${1:-}"
-  test -z "$item" && echo 'Provide memory item' && exit 1
-  printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$item" >> "$MEMORY_FILE"
-  echo '[crecall] Memory added.'
+  local content="${1:-}"
+  shift || true
+  
+  # Parse optional flags
+  local category=""
+  local importance=""
+  local tags=""
+  
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --category)
+        category="$2"
+        shift 2
+        ;;
+      --importance)
+        importance="$2"
+        shift 2
+        ;;
+      --tags)
+        tags="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+  
+  test -z "$content" && echo 'Provide memory content' && exit 1
+  
+  # If API is available, use it
+  if api_available; then
+    local json_data="{\"content\":\"$content\""
+    
+    if [ -n "$category" ]; then
+      json_data="$json_data,\"category\":\"$category\""
+    fi
+    
+    if [ -n "$importance" ]; then
+      json_data="$json_data,\"importance\":$importance"
+    fi
+    
+    if [ -n "$tags" ]; then
+      # Convert comma-separated tags to JSON array
+      local tags_json=$(echo "$tags" | awk -F',' '{printf "["} {for(i=1;i<=NF;i++){printf "\"%s\"", $i; if(i<NF) printf ","}} {printf "]"}')
+      json_data="$json_data,\"tags\":$tags_json"
+    fi
+    
+    json_data="$json_data}"
+    
+    local response=$(api_call POST /memories \
+      -H "Content-Type: application/json" \
+      -d "$json_data")
+    
+    echo "[crecall] Memory added via API"
+  else
+    # Fallback to local file
+    printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$content" >> "$MEMORY_FILE"
+    echo '[crecall] Memory added locally (API not available)'
+  fi
 }
 
 memory_list() {
@@ -124,6 +194,136 @@ memory_list() {
 memory_clear() {
   : > "$MEMORY_FILE"
   echo '[crecall] Memory cleared.'
+}
+
+# Clip management
+clip_add() {
+  local note="${1:-Manual clip}"
+  if api_available; then
+    local response=$(api_call POST /clips \
+      -H "Content-Type: application/json" \
+      -d "{\"session_id\":1,\"name\":\"$note\",\"is_auto\":false,\"content\":{\"type\":\"manual\",\"note\":\"$note\"}}")
+    echo "[crecall] Clip created via API"
+    echo "$response" | python3 -m json.tool 2>/dev/null || echo "$response"
+  else
+    echo "[crecall] API not available. Saving locally..."
+    save_checkpoint "$note"
+  fi
+}
+
+clip_list() {
+  local limit="${1:-10}"
+  if api_available; then
+    echo "[crecall] Fetching clips from API..."
+    local script_dir="$(dirname "$(readlink -f "$0")")"
+    api_call GET "/clips/?limit=$limit" | python3 "$script_dir/format_clips.py"
+  else
+    echo "[crecall] API not available. Showing local checkpoints..."
+    tail -n "$limit" "$LOG_FILE" 2>/dev/null | while read -r line; do
+      echo "  $line"
+    done
+  fi
+}
+
+clip_resume() {
+  local clip_id="${1:-}"
+  if test -z "$clip_id"; then
+    echo "[crecall] Usage: crecall clip resume <clip_id>"
+    echo "[crecall] Use 'crecall clip list' to see available clips"
+    return 1
+  fi
+  
+  if api_available; then
+    echo "[crecall] Restoring from clip: $clip_id"
+    local start_time=$(date +%s%3N)
+    local clip_data=$(api_call GET "/clips/$clip_id")
+    local end_time=$(date +%s%3N)
+    local duration=$((end_time - start_time))
+    
+    if echo "$clip_data" | grep -q "clip_id"; then
+      echo "✓ Clip restored in ${duration}ms (instant recall!)"
+      echo "$clip_data" | python3 -m json.tool 2>/dev/null || echo "$clip_data"
+      
+      # Extract working directory and cd to it if available
+      local wd=$(echo "$clip_data" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("working_directory",""))' 2>/dev/null)
+      if test -n "$wd" && test -d "$wd"; then
+        echo "[crecall] Working directory: $wd"
+        echo "[crecall] Run: cd $wd"
+      fi
+    else
+      echo "✗ Clip not found: $clip_id"
+      return 1
+    fi
+  else
+    echo "[crecall] API not available. Cannot resume from clip."
+    return 1
+  fi
+}
+
+clip_clear() {
+  if api_available; then
+    echo "[crecall] Pruning clips via API..."
+    api_call POST "/clips/prune/?keep_last=100" -H "Content-Type: application/json" -d '{}'
+    echo "[crecall] Clips pruned (kept last 100)"
+  else
+    echo "[crecall] API not available. Use 'crecall cache prune --keep-last N'"
+  fi
+}
+
+# Memory resume (load memory by ID)
+memory_resume() {
+  local memory_id="${1:-}"
+  if test -z "$memory_id"; then
+    echo "[crecall] Usage: crecall memory resume <id>"
+    echo "[crecall] Use 'crecall memory list' to see available memories"
+    return 1
+  fi
+  
+  if api_available; then
+    echo "[crecall] Loading memory: $memory_id"
+    local memory_data=$(api_call GET "/memories/$memory_id/")
+    
+    if echo "$memory_data" | grep -q "content"; then
+      echo "✓ Memory loaded"
+      echo "$memory_data" | python3 -m json.tool 2>/dev/null || echo "$memory_data"
+    else
+      echo "✗ Memory not found: $memory_id"
+      return 1
+    fi
+  else
+    echo "[crecall] API not available. Showing local memories..."
+    local line_num=$((memory_id))
+    sed -n "${line_num}p" "$MEMORY_FILE" 2>/dev/null || echo "Memory not found"
+  fi
+}
+
+# Memory search
+memory_search() {
+  local query="${1:-}"
+  if test -z "$query"; then
+    echo "[crecall] Usage: crecall memory search <query>"
+    echo "[crecall] Example: crecall memory search 'authentication'"
+    return 1
+  fi
+  
+  if api_available; then
+    echo "[crecall] Searching memories for: $query"
+    local script_dir="$(dirname "$(readlink -f "$0")")"
+    local search_data=$(api_call POST "/memories/search?query=$(echo "$query" | sed 's/ /%20/g')")
+    
+    if echo "$search_data" | grep -q "results"; then
+      local count=$(echo "$search_data" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("count",0))' 2>/dev/null)
+      echo "✓ Found $count results"
+      echo ""
+      echo "$search_data" | python3 "$script_dir/format_memory_search.py"
+    else
+      echo "✗ Search failed"
+      return 1
+    fi
+  else
+    echo "[crecall] API not available. Searching local memories..."
+    grep -i "$query" "$MEMORY_FILE" 2>/dev/null || echo "No matches found"
+  fi
 }
 
 resume() {
@@ -180,32 +380,154 @@ data_clear() {
 
 show_help() {
 cat <<'HELP'
-Commands:
-  save [note]              Save checkpoint
-  summary|refer            Show summary
-  total <file>             Plain transcript & pause
-  total-encrypt <file>     Encrypted transcript & pause
-  resume --yes             Resume if paused
-  pause                    Pause session
-  memory add <text>        Add memory item
-  memory list [N]          List last N (default 20)
-  memory clear             Clear memory log
-  encrypt <file>           Encrypt file
-  decrypt <file.enc>       Decrypt file
-  cache prune --keep-last N [--dry-run]
-  data clear               Wipe log + transcripts
-  state                    Show state JSON
-  version                  Show version
-  help                     Show this help
+crecall - Session Recall & Memory Management v0.1.0d-2
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 SESSION COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  crecall --save [note]              Save checkpoint (auto if blank)
+  crecall -s [note]                  [Short form]
+  
+  crecall --summary                  Show session summary
+  crecall -S                         [Short form]
+  
+  crecall --total <file>             Plain transcript & pause
+  crecall -t <file>                  [Short form]
+  
+  crecall --total-encrypt <file>     Encrypted transcript & pause
+  crecall -T <file>                  [Short form]
+  
+  crecall --resume --yes             Resume from pause
+  crecall -r --yes                   [Short form]
+  
+  crecall --pause                    Pause session
+  crecall -p                         [Short form]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧠 MEMORY COMMANDS (Flagship Feature!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  crecall --memory add <text>        Add memory (never lose context!)
+  crecall -m add <text>              [Short form]
+  
+  crecall --memory list [N]          List last N memories (default 20)
+  crecall -m list                    [Short form]
+  crecall -m ls                      [Alternative]
+  
+  crecall --memory search <query>    Search memories by content
+  crecall -m search <query>          [Short form]
+  
+  crecall --memory resume <id>       Load/resume from memory by ID
+  crecall -m resume <id>             [Short form]
+  crecall -m load <id>               [Alternative]
+  
+  crecall --memory clear             Clear memory log
+  crecall -m clear                   [Short form]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📎 CLIP COMMANDS (Instant Recall!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  crecall --clip add [note]          Create manual clip
+  crecall -c add [note]              [Short form]
+  
+  crecall --clip list [N]            List clips (default last 10)
+  crecall -c list                    [Short form]
+  crecall -c ls                      [Alternative]
+  
+  crecall --clip resume <id>         Restore from clip (<100ms!)
+  crecall -c resume <id>             [Short form]
+  crecall -c load <id>               [Alternative]
+  crecall -c restore <id>            [Alternative]
+  
+  crecall --clip clear               Prune clips (keep last 100)
+  crecall -c clear                   [Short form]
+  crecall -c prune                   [Alternative]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 ENCRYPTION & DATA MANAGEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  crecall --encrypt <file>           Encrypt file (creates .enc)
+  crecall -e <file>                  [Short form]
+  
+  crecall --decrypt <file.enc>       Decrypt file
+  crecall -d <file.enc>              [Short form]
+  
+  crecall --cache prune --keep-last N [--dry-run]
+                                     Prune old logs
+  
+  crecall --data clear               Wipe all data (confirm required)
+  crecall -D clear                   [Short form]
+  
+  crecall --state                    Show state JSON
+  crecall -x                         [Short form]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ℹ️  GENERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  crecall --version                  Show version
+  crecall -v                         [Short form]
+  
+  crecall --help                     Show this help
+  crecall -h                         [Short form]
+  
+  crecall --settings                 Settings menu (coming soon)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Tips & Notes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Memory is the flagship feature - use it often to preserve context
+• Clips provide instant recall (<100ms restore time)
+• API must be running for clip/memory features (localhost:8000)
+• Use 'crecall -m list' to see memory IDs, then 'crecall -m resume <id>'
+• Use 'crecall -c list' to see clip IDs, then 'crecall -c resume <id>'
+• Settings are configurable via 'crecall --settings' (coming soon)
+
+📚 Documentation:
+   • README.md in project root
+   • API docs: http://localhost:8000/docs (if backend running)
+   • Frontend UI: http://localhost:5173 (if frontend running)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 HELP
+}
+
+show_reminder() {
+cat <<'REMINDER'
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 crecall Quick Reminder
+
+💡 Memory is your flagship feature - never lose context again!
+   Use: crecall --memory add "important note here"
+
+⚙️  Settings can be changed via: crecall --settings (coming soon)
+📖 Full help: crecall --help
+🔧 API docs: http://localhost:8000/docs (if backend running)
+
+🎯 Quick commands:
+   -s, --save          Save checkpoint
+   -m, --memory        Memory commands (add/list/clear)
+   -S, --summary       Show session summary
+   -v, --version       Show version
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REMINDER
 }
 
 main() {
   init_dirs
+  
+  # Check for crash recovery on first run (unless it's help/version)
   local raw="${1:-}"
   if [ -z "$raw" ]; then
-    echo 'Invalid command. Use "crecall --help" for more information.'
-    exit 1
+    # Check for crash and offer recovery
+    if [ -f "$DATA_HOME/crash_marker.json" ]; then
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "⚠️  Crash detected from previous session!"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo ""
+      echo "Run 'crecall-recover' to restore your work."
+      echo ""
+    fi
+    show_reminder
+    exit 0
   fi
   # Require leading dash for any command
   case "$raw" in
@@ -222,9 +544,10 @@ main() {
     -r|--resume) cmd="resume";;
     -p|--pause) cmd="pause";;
     -m|--memory) cmd="memory";;
+    -c|--clip) cmd="clip";;
     -e|--encrypt) cmd="encrypt";;
     -d|--decrypt) cmd="decrypt";;
-    -c|--cache) cmd="cache";;
+    --cache) cmd="cache";;
     -D|--data) cmd="data";;
     -x|--state) cmd="state";;
     -v|--version) cmd="version";;
@@ -246,7 +569,19 @@ main() {
         add) memory_add "$@" ;;
         list) memory_list "$@" ;;
         clear) memory_clear ;;
-        *) echo 'Invalid memory subcommand. Use: memory add|list|clear'; exit 1;;
+        resume|load) memory_resume "$@" ;;
+        search) memory_search "$@" ;;
+        *) echo 'Invalid memory subcommand. Use: memory add|list|clear|resume|search'; exit 1;;
+      esac ;;
+    clip)
+      local sub="${1:-}"
+      shift || true
+      case "$sub" in
+        add) clip_add "$@" ;;
+        list|ls) clip_list "$@" ;;
+        resume|restore|load) clip_resume "$@" ;;
+        clear|prune) clip_clear ;;
+        *) echo 'Invalid clip subcommand. Use: clip add|list|resume|clear'; exit 1;;
       esac ;;
     encrypt) encrypt_file "$@" ;;
     decrypt) decrypt_file "$@" ;;
