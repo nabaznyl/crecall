@@ -1,14 +1,57 @@
 # crecall - Session Recall and Transcript Tool
 
-**Current Version:** v0.1.0d-6 (preview)  
-**Status:** Active Development - Memory Features Coming Soon!
-**UI Theme:** Default Dark Mode (toggleable light mode) • Settings menu available
+**Current Version:** v0.1.0d-7 (preview)  
+**Status:** Active Development - Professional Build Infrastructure Ready!  
+**UI Theme:** Default Dark Mode (toggleable light mode) • Settings menu available  
+**Build Channels:** Stable | Nightly | Dev
 
 Session continuity and checkpoint logging with encryption, pause/resume semantics, and **intelligent memory management**.
 
 **Data Directory:** `~/.recall_memory` (auto-migrates from `~/.recall_chat` or `~/.chat_recall`)
 
-> **See:** [PATCH_NOTES.md](PATCH_NOTES.md) for detailed version history and upcoming features.
+> **See:** 
+> - [PATCH_NOTES.md](PATCH_NOTES.md) for detailed version history
+> - [BUILD_STANDARDS.md](BUILD_STANDARDS.md) for build infrastructure
+> - [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines
+> - [SECURITY_PROTOCOLS.md](SECURITY_PROTOCOLS.md) for security information
+> - [BRAND_LICENSE_AGREEMENT.md](BRAND_LICENSE_AGREEMENT.md) for licensing
+
+---
+
+## 🚀 Quick Start
+
+### Installation Options
+
+**Docker (Recommended for testing):**
+```bash
+# Stable release
+docker run -p 8000:8000 -v ~/.recall_memory:/root/.recall_memory crecall:stable
+
+# Nightly build
+docker run -p 8000:8000 -v ~/.recall_memory:/root/.recall_memory crecall:nightly
+
+# Development with hot-reload
+docker-compose up crecall-dev
+```
+
+**From Source:**
+```bash
+# Clone and build
+git clone https://github.com/crecall/crecall.git
+cd crecall
+./scripts/build-stable.sh
+
+# Install Debian package
+sudo dpkg -i dist/crecall_*.deb
+```
+
+**CLI Quick Test:**
+```bash
+crecall --version    # Show version
+crecall --settings   # Configure preferences
+crecall -s start     # Start new session
+crecall -m "Important note"  # Add memory
+```
 
 ---
 
@@ -27,13 +70,86 @@ Session continuity and checkpoint logging with encryption, pause/resume semantic
 
 ## ✨ New Updates & Features
 
-### 🆕 Latest (v0.1.0d-2 (preview))
-- ✅ **Dash-Only Commands**: All commands now require `--` or `-` prefix for clarity
-- ✅ **Short Flags**: Quick access with single-character flags (`-s`, `-m`, `-r`, etc.)
-- ✅ **Improved Error Messages**: Better guidance when commands are incorrect
-- ✅ **Version Control**: Consistent version display via `--version` or `-v`
+### ✨ Latest Updates
 
-### 🚀 Coming Soon (Priority Features)
+#### v0.1.0d-7 (preview) - November 21, 2025
+**Professional Build Infrastructure**
+- ✅ **Build Channels**: Stable, Nightly, Dev with automated version management
+- ✅ **CI/CD Pipeline**: GitHub Actions for automated testing, linting, and releases
+- ✅ **Docker Support**: Multi-stage builds for all channels with optimization
+- ✅ **Testing Suite**: Comprehensive pytest tests (unit + integration)
+- ✅ **Code Quality**: Black, Pylint, ESLint, Prettier configurations
+- ✅ **Performance**: Profiling tools and query optimization
+- ✅ **Documentation**: CONTRIBUTING.md, BUILD_STANDARDS.md
+
+#### v0.1.0d-6 (preview) - November 21, 2025
+- ✅ **Settings Menu**: Interactive CLI configuration (`crecall --settings`)
+- ✅ **Theme System**: Dark/light toggle with OS detection
+- ✅ **Migration Ready**: Alembic infrastructure for PostgreSQL
+- ✅ **Security Docs**: Comprehensive protocols and licensing
+
+---
+
+## 🏗️ Build & Development
+
+### Development Workflow
+
+```bash
+# Clone repository
+git clone https://github.com/crecall/crecall.git
+cd crecall
+
+# Install dependencies
+cd backend && pip install -e ".[dev]"
+cd ../frontend && npm install
+cd ../vscode-extension && npm install
+
+# Run linters
+./scripts/lint.sh check    # Check code quality
+./scripts/lint.sh fix      # Auto-fix issues
+
+# Run tests
+cd backend && pytest       # Run test suite
+pytest --cov=app          # With coverage
+
+# Performance profiling
+./scripts/profile.sh       # Full performance analysis
+```
+
+### Building Releases
+
+```bash
+# Bump version
+./scripts/version-bump.sh patch stable  # 0.1.0 -> 0.1.1
+
+# Build stable release
+./scripts/build-stable.sh  # Creates dist/ artifacts
+
+# Build nightly
+./scripts/build-nightly.sh # Creates dist-nightly/ artifacts
+
+# Full release automation
+./scripts/release.sh stable patch  # Complete workflow
+```
+
+### Docker Development
+
+```bash
+# Run all services
+docker-compose up
+
+# Run specific channel
+docker-compose --profile nightly up crecall-nightly
+docker-compose --profile dev up crecall-dev
+
+# Build specific image
+docker build -t crecall:stable .
+docker build -f Dockerfile.nightly -t crecall:nightly .
+```
+
+---
+
+## 🚀 Coming Soon (Priority Features)
 
 **Memory System Overhaul** - *The heart of crecall and main reason to use this application*
 - 🔜 **Instant Recall (`crecall --recall`)**: Near-instantaneous session restoration from lightweight "clips" (restore points with minimal footprint)
