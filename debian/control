@@ -1,0 +1,15 @@
+Source: crecall
+Section: utils
+Priority: optional
+Maintainer: Local Maintainer <maintainer@example.com>
+Standards-Version: 4.6.2
+Build-Depends: debhelper-compat (= 13)
+Homepage: https://example.com/crecall
+Rules-Requires-Root: no
+
+Package: crecall
+Architecture: all
+Depends: bash, python3, jq, openssl, ${misc:Depends}
+Description: Session recall and transcript capture tool (preview)
+ Provides checkpoint logging, pause/resume semantics, encrypted transcripts,
+ memory tagging, pruning and data clearance operations. Preview build.

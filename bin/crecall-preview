@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "[preview] Creating sample transcript.txt"
+cat > transcript.txt <<EOF
+Session Transcript Preview
+Line 1: Initialization
+Line 2: Work performed
+EOF
+
+crecall save "Initial preview checkpoint"
+crecall memory add "Milestone: preview start"
+crecall summary
+crecall total transcript.txt
+crecall summary
+crecall resume --yes
+crecall save "Post-resume checkpoint"
+crecall total-encrypt transcript.txt
+crecall summary
+
+echo "[preview] Done. Files in $HOME/.recall_chat"

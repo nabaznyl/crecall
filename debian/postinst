@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+case "$1" in
+  configure)
+    # post-install message
+    echo "[crecall] Installed. Data dir: ~/.recall_memory (auto-migrates from ~/.recall_chat or ~/.chat_recall). Run 'crecall save' to create first checkpoint." || true
+    ;;
+esac
+exit 0

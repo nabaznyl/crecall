@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+set -euo pipefail
+VERSION="v0.1.0d-2(preview)"
+DATA_HOME="$HOME/.recall_memory"
+LOG_FILE="$DATA_HOME/recall.log"
+STATE_FILE="$DATA_HOME/state.json"
+MEMORY_FILE="$DATA_HOME/recall_memory.log"
+TRANSCRIPTS_DIR="$DATA_HOME/transcripts"
+PASSPHRASE_FILE="$DATA_HOME/passphrase"
+
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  printf '%s' "$s"
+}
+
+init_dirs() {
+  mkdir -p "$DATA_HOME" "$TRANSCRIPTS_DIR"
+  test -f "$STATE_FILE" || echo '{"status":"active"}' > "$STATE_FILE"
+  test -f "$LOG_FILE" || touch "$LOG_FILE"
+  test -f "$MEMORY_FILE" || touch "$MEMORY_FILE"
+}
+
+is_paused() {
+  grep -q '"paused"' "$STATE_FILE" 2>/dev/null || return 1
+}
+
+set_state() {
+  printf '{"status":"%s"}\n' "$1" > "$STATE_FILE"
+}
+
+ensure_passphrase() {
+  test -n "${RECALL_PASSPHRASE:-}" && return 0
+  if test -f "$PASSPHRASE_FILE"; then
+    RECALL_PASSPHRASE=$(cat "$PASSPHRASE_FILE")
+    export RECALL_PASSPHRASE
+    return 0
+  fi
+  RECALL_PASSPHRASE=$(openssl rand -hex 32)
+  printf '%s' "$RECALL_PASSPHRASE" > "$PASSPHRASE_FILE"
+  chmod 600 "$PASSPHRASE_FILE"
+  export RECALL_PASSPHRASE
+}
+
+save_checkpoint() {
+  if is_paused && test -z "${FORCE:-}"; then
+    echo '[crecall] Skipped save (paused).'
+    return 0
+  fi
+  local note="${1:-Auto checkpoint}"
+  local ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  local cwd=$(pwd)
+  local ctx=$(command -v docker >/dev/null 2>&1 && docker context show 2>/dev/null || echo default)
+  printf '{"timestamp":"%s","note":"%s","cwd":"%s","docker_context":"%s"}\n' \
+    "$ts" "$(json_escape "$note")" "$(json_escape "$cwd")" "$(json_escape "$ctx")" >> "$LOG_FILE"
+  echo "[crecall] Saved: $note"
+}
+
+summary() {
+  echo "[crecall] Entries: $(wc -l < "$LOG_FILE" 2>/dev/null || echo 0)"
+  echo "[crecall] State: $(cat "$STATE_FILE" 2>/dev/null || echo unknown)"
+  echo 'Recent:'
+  tail -n 5 "$LOG_FILE" 2>/dev/null | sed 's/^/  /' || true
+  echo 'Memory:'
+  tail -n 5 "$MEMORY_FILE" 2>/dev/null | sed 's/^/  /' || true
+}
+
+transcript_plain() {
+  local f="${1:-}"
+  test -z "$f" && echo 'Provide file' && exit 1
+  test -f "$f" || { echo 'Not found'; exit 1; }
+  local ts=$(date -u +%Y%m%dT%H%M%SZ)
+  local out="$TRANSCRIPTS_DIR/transcript-$ts.txt"
+  cp "$f" "$out"
+  echo "[crecall] Transcript: $out"
+  set_state paused
+  echo '[crecall] Paused.'
+}
+
+transcript_encrypt() {
+  local f="${1:-}"
+  test -z "$f" && echo 'Provide file' && exit 1
+  test -f "$f" || { echo 'Not found'; exit 1; }
+  ensure_passphrase
+  local ts=$(date -u +%Y%m%dT%H%M%SZ)
+  local out="$TRANSCRIPTS_DIR/transcript-$ts.txt.enc"
+  openssl enc -aes-256-cbc -pbkdf2 -salt -in "$f" -out "$out" -pass env:RECALL_PASSPHRASE
+  echo "[crecall] Encrypted: $out"
+  set_state paused
+  echo '[crecall] Paused.'
+}
+
+encrypt_file() {
+  local f="${1:-}"
+  test -z "$f" && echo 'Provide file' && exit 1
+  test -f "$f" || { echo 'Not found'; exit 1; }
+  ensure_passphrase
+  openssl enc -aes-256-cbc -pbkdf2 -salt -in "$f" -out "$f.enc" -pass env:RECALL_PASSPHRASE
+  echo "[crecall] Encrypted: $f.enc"
+}
+
+decrypt_file() {
+  local f="${1:-}"
+  test -z "$f" && echo 'Provide .enc file' && exit 1
+  test -f "$f" || { echo 'Not found'; exit 1; }
+  ensure_passphrase
+  local out="${f%.enc}"
+  openssl enc -d -aes-256-cbc -pbkdf2 -in "$f" -out "$out" -pass env:RECALL_PASSPHRASE
+  echo "[crecall] Decrypted: $out"
+}
+
+memory_add() {
+  local item="${1:-}"
+  test -z "$item" && echo 'Provide memory item' && exit 1
+  printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$item" >> "$MEMORY_FILE"
+  echo '[crecall] Memory added.'
+}
+
+memory_list() {
+  tail -n "${1:-20}" "$MEMORY_FILE" 2>/dev/null || true
+}
+
+memory_clear() {
+  : > "$MEMORY_FILE"
+  echo '[crecall] Memory cleared.'
+}
+
+resume() {
+  if ! is_paused; then
+    echo '[crecall] Already active.'
+    return 0
+  fi
+  if test "${1:-}" = '--yes'; then
+    set_state active
+    echo '[crecall] Resumed.'
+  else
+    echo 'Use --yes to confirm resume'
+  fi
+}
+
+manual_pause() {
+  set_state paused
+  echo '[crecall] Paused.'
+}
+
+cache_prune() {
+  local keep_last="" dry=""
+  while test $# -gt 0; do
+    case "$1" in
+      --keep-last) keep_last="$2"; shift 2;;
+      --dry-run) dry=1; shift;;
+      *) echo 'Unknown option'; exit 1;;
+    esac
+  done
+  test -n "$keep_last" || { echo '[crecall] Specify --keep-last N'; return 1; }
+  local tmp="$LOG_FILE.tmp"
+  tail -n "$keep_last" "$LOG_FILE" > "$tmp" 2>/dev/null || true
+  local o=$(wc -l < "$LOG_FILE" 2>/dev/null || echo 0)
+  local n=$(wc -l < "$tmp" 2>/dev/null || echo 0)
+  if test -n "$dry"; then
+    echo "[crecall] Dry-run: $o -> $n"
+    rm -f "$tmp"
+    return 0
+  fi
+  mv "$tmp" "$LOG_FILE"
+  echo "[crecall] Pruned: $o -> $n"
+}
+
+data_clear() {
+  echo 'Type YES to confirm:'
+  read -r ans
+  test "$ans" = 'YES' || { echo 'Aborted.'; return 1; }
+  rm -f "$LOG_FILE"
+  rm -rf "$TRANSCRIPTS_DIR"
+  mkdir -p "$TRANSCRIPTS_DIR"
+  touch "$LOG_FILE"
+  echo '[crecall] Data cleared.'
+}
+
+show_help() {
+cat <<'HELP'
+Commands:
+  save [note]              Save checkpoint
+  summary|refer            Show summary
+  total <file>             Plain transcript & pause
+  total-encrypt <file>     Encrypted transcript & pause
+  resume --yes             Resume if paused
+  pause                    Pause session
+  memory add <text>        Add memory item
+  memory list [N]          List last N (default 20)
+  memory clear             Clear memory log
+  encrypt <file>           Encrypt file
+  decrypt <file.enc>       Decrypt file
+  cache prune --keep-last N [--dry-run]
+  data clear               Wipe log + transcripts
+  state                    Show state JSON
+  version                  Show version
+  help                     Show this help
+HELP
+}
+
+main() {
+  init_dirs
+  local raw="${1:-}"
+  if [ -z "$raw" ]; then
+    echo 'Invalid command. Use "crecall --help" for more information.'
+    exit 1
+  fi
+  # Require leading dash for any command
+  case "$raw" in
+    --*|-*) ;; 
+    *) echo 'Invalid command. Use "crecall --help" for more information.'; exit 1;;
+  esac
+  # Map short flags to long command tokens
+  local cmd="$raw"
+  case "$cmd" in
+    -s|--save) cmd="save";;
+    -S|--summary|--refer) cmd="summary";;
+    -t|--total) cmd="total";;
+    -T|--total-encrypt) cmd="total-encrypt";;
+    -r|--resume) cmd="resume";;
+    -p|--pause) cmd="pause";;
+    -m|--memory) cmd="memory";;
+    -e|--encrypt) cmd="encrypt";;
+    -d|--decrypt) cmd="decrypt";;
+    -c|--cache) cmd="cache";;
+    -D|--data) cmd="data";;
+    -x|--state) cmd="state";;
+    -v|--version) cmd="version";;
+    -h|--help|--usage) cmd="help";;
+    *) echo 'Invalid command. Use "crecall --help" for more information.'; exit 1;;
+  esac
+  shift || true
+  case "$cmd" in
+    save) save_checkpoint "$@" ;;
+    summary) summary ;;
+    total) transcript_plain "$@" ;;
+    total-encrypt) transcript_encrypt "$@" ;;
+    resume) resume "$@" ;;
+    pause) manual_pause ;;
+    memory)
+      local sub="${1:-}"
+      shift || true
+      case "$sub" in
+        add) memory_add "$@" ;;
+        list) memory_list "$@" ;;
+        clear) memory_clear ;;
+        *) echo 'Invalid memory subcommand. Use: memory add|list|clear'; exit 1;;
+      esac ;;
+    encrypt) encrypt_file "$@" ;;
+    decrypt) decrypt_file "$@" ;;
+    cache)
+      test "${1:-}" = 'prune' || { echo 'Invalid cache subcommand. Use: cache prune'; exit 1; }
+      shift || true
+      cache_prune "$@" ;;
+    data)
+      test "${1:-}" = 'clear' || { echo 'Invalid data subcommand. Use: data clear'; exit 1; }
+      data_clear ;;
+    state) cat "$STATE_FILE" 2>/dev/null || echo '{}' ;;
+    version) echo "$VERSION" ;;
+    help) show_help ;;
+    *) echo 'Invalid command. Use "crecall --help" for more information.'; exit 1 ;;
+  esac
+}
+
+main "$@"

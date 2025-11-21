@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+case "$1" in
+  remove)
+    echo "[crecall] Removing package (user data in ~/.crecall retained)." || true
+    ;;
+ esac
+exit 0

@@ -1,0 +1,40 @@
+crecall (0.1.0d-2) unstable; urgency=medium
+
+  * Enforce dash-prefixed commands only
+  * Add short flag mappings (-s, -S, -t, -T, -r, -p, -m, -e, -d, -c, -D, -x, -v, -h)
+  * Update invalid command message wording
+  * Show version only via --version or -v
+
+ -- Local Maintainer <maintainer@example.com>  Wed, 20 Nov 2025 23:50:00 +0000
+
+crecall (0.1.0d-1) unstable; urgency=medium
+
+  * Revert help formatting to bare commands list
+  * Support both '--' and bare command invocation
+  * Align script version with package (v0.1.0d-1 preview)
+
+ -- Local Maintainer <maintainer@example.com>  Wed, 20 Nov 2025 23:40:00 +0000
+
+crecall (0.1.0c-1) unstable; urgency=medium
+
+  * Switch to -- prefixed commands
+  * Add invalid no-arg error guidance
+  * Prefix displayed version with v (v0.1.0c)
+  * Remove version line from summary output
+
+ -- Local Maintainer <maintainer@example.com>  Wed, 20 Nov 2025 23:20:00 +0000
+
+crecall (0.1.0b-1) unstable; urgency=medium
+
+  * Rename recall_chat to recall_memory throughout
+  * Add (preview) tag to version display
+  * Add default input handling for save command
+  * Simplify help output format
+
+ -- Local Maintainer <maintainer@example.com>  Wed, 20 Nov 2025 22:30:00 +0000
+
+crecall (0.1.0a-1) unstable; urgency=medium
+
+  * Initial preview release providing unified wrapper, encryption, pruning.
+
+ -- Local Maintainer <maintainer@example.com>  Thu, 20 Nov 2025 12:00:00 +0000
