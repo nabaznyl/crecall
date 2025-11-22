@@ -28,9 +28,11 @@ class RemoteSync:
         db: AsyncSession,
         host: str,
         user: Optional[str] = None,
-        path: str = "/tmp/crecall_bundle.json",
+        path: Optional[str] = None,
         encryption_key: Optional[str] = None,
     ) -> Dict[str, Any]:
+        if path is None:
+            path = os.path.join(tempfile.gettempdir(), "crecall_bundle.json")
         bundle = await export_full(db, encryption_key=encryption_key)
         tmpdir = tempfile.mkdtemp(prefix="crecall_sync_")
         bundle_file = os.path.join(tmpdir, "bundle.json")
@@ -75,10 +77,12 @@ class RemoteSync:
         db: AsyncSession,
         host: str,
         user: Optional[str] = None,
-        path: str = "/tmp/crecall_bundle.json",
+        path: Optional[str] = None,
         encryption_key: Optional[str] = None,
         encrypted: bool = False,
     ) -> Dict[str, Any]:
+        if path is None:
+            path = os.path.join(tempfile.gettempdir(), "crecall_bundle.json")
         tmpdir = tempfile.mkdtemp(prefix="crecall_sync_")
         local_file = os.path.join(tmpdir, "bundle_in.json")
         scp_source = f"{user+'@' if user else ''}{host}:{path}"

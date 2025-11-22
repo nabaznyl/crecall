@@ -142,13 +142,13 @@ class CacheManager:
 
     def cache_embedding(self, text: str, embedding: Any, ttl: int = 86400):
         """Cache text embedding (24 hour TTL)"""
-        text_hash = hashlib.md5(text.encode()).hexdigest()
+        text_hash = hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()
         key = f"embedding:{text_hash}"
         self.set(key, embedding, ttl)
 
     def get_cached_embedding(self, text: str) -> Optional[Any]:
         """Get cached embedding"""
-        text_hash = hashlib.md5(text.encode()).hexdigest()
+        text_hash = hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()
         key = f"embedding:{text_hash}"
         return self.get(key)
 
@@ -207,7 +207,7 @@ def cached(ttl: int = 300, key_prefix: str = ""):
 
             # Generate cache key from function name and arguments
             cache_key = f"{key_prefix}:{func.__name__}:{str(args)}:{str(kwargs)}"
-            cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
+            cache_key_hash = hashlib.md5(cache_key.encode(), usedforsecurity=False).hexdigest()
 
             # Try to get from cache
             cached_result = cache.get(cache_key_hash)
@@ -245,7 +245,7 @@ class QueryCache:
     def build_key(self, *args) -> str:
         """Build cache key from arguments"""
         key_str = ":".join(str(arg) for arg in args)
-        return hashlib.md5(key_str.encode()).hexdigest()
+        return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
     def get(self, key: str) -> Optional[Any]:
         """Get from cache"""
