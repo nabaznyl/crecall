@@ -6,15 +6,17 @@ categories, popular tags, importance and date filtering.
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.main import app
+from app.db.models import Memory
+from app.db.models import Session as SessionModel
 from app.db.session import Base
-from app.db.models import Memory, Session as SessionModel
+from app.main import app
 
 ASYNC_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(ASYNC_DB_URL, future=True)
@@ -38,7 +40,9 @@ async def async_client(db_session):
             yield db_session
         finally:
             pass
+
     from app.db.session import get_db
+
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -84,7 +88,9 @@ async def test_memory_create_and_list(async_client):
 
 @pytest.mark.asyncio
 async def test_memory_get_update_delete(async_client):
-    created = await create_memory(async_client, "sess-X", content="Original", tags=["edit"], importance=1)
+    created = await create_memory(
+        async_client, "sess-X", content="Original", tags=["edit"], importance=1
+    )
     mid = created["id"]
 
     # Get
@@ -93,7 +99,10 @@ async def test_memory_get_update_delete(async_client):
     assert resp_get.json()["content"] == "Original"
 
     # Update
-    resp_upd = await async_client.put(f"/api/memories/{mid}", json={"content": "Updated", "importance": 2, "tags": ["edit","updated"]})
+    resp_upd = await async_client.put(
+        f"/api/memories/{mid}",
+        json={"content": "Updated", "importance": 2, "tags": ["edit", "updated"]},
+    )
     assert resp_upd.status_code == 200
     upd = resp_upd.json()
     assert upd["content"] == "Updated"
@@ -110,11 +119,29 @@ async def test_memory_get_update_delete(async_client):
 @pytest.mark.asyncio
 async def test_memory_advanced_search(async_client):
     # Create memories with varied attributes
-    await create_memory(async_client, "sess-S", content="Search apple", tags=["fruit"], category="food", importance=1)
-    await create_memory(async_client, "sess-S", content="Search banana", tags=["fruit","yellow"], category="food", importance=2)
-    await create_memory(async_client, "sess-S", content="Search carrot", tags=["veg"], category="food", importance=0)
+    await create_memory(
+        async_client,
+        "sess-S",
+        content="Search apple",
+        tags=["fruit"],
+        category="food",
+        importance=1,
+    )
+    await create_memory(
+        async_client,
+        "sess-S",
+        content="Search banana",
+        tags=["fruit", "yellow"],
+        category="food",
+        importance=2,
+    )
+    await create_memory(
+        async_client, "sess-S", content="Search carrot", tags=["veg"], category="food", importance=0
+    )
 
-    resp_search = await async_client.post("/api/memories/search?query=Search&min_importance=1&limit=10")
+    resp_search = await async_client.post(
+        "/api/memories/search?query=Search&min_importance=1&limit=10"
+    )
     assert resp_search.status_code == 200
     data = resp_search.json()
     assert data["count"] >= 2
@@ -136,8 +163,8 @@ async def test_categories_endpoint(async_client):
 
 @pytest.mark.asyncio
 async def test_popular_tags_endpoint(async_client):
-    await create_memory(async_client, "sess-T", tags=["x","y"])
-    await create_memory(async_client, "sess-T", tags=["x","z"])
+    await create_memory(async_client, "sess-T", tags=["x", "y"])
+    await create_memory(async_client, "sess-T", tags=["x", "z"])
     await create_memory(async_client, "sess-T", tags=["x"])
     resp_tags = await async_client.get("/api/memories/tags/popular?limit=5")
     assert resp_tags.status_code == 200
@@ -152,7 +179,9 @@ async def test_importance_and_date_filters(async_client):
     now = datetime.now(timezone.utc)
     m_old = await create_memory(async_client, "sess-D", content="Old", importance=0)
     # Simulate older timestamp by direct DB update
-    async with async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as raw_sess:
+    async with async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )() as raw_sess:
         result = await raw_sess.execute(select(Memory).where(Memory.id == m_old["id"]))
         obj = result.scalar_one()
         obj.created_at = now - timedelta(days=2)
@@ -162,7 +191,9 @@ async def test_importance_and_date_filters(async_client):
 
     # Use naive ISO (strip timezone) to match existing endpoint parser expectations
     date_from = (now - timedelta(days=1)).replace(tzinfo=None).isoformat()
-    resp_search = await async_client.post(f"/api/memories/search?query=&min_importance=1&date_from={date_from}&limit=10")
+    resp_search = await async_client.post(
+        f"/api/memories/search?query=&min_importance=1&date_from={date_from}&limit=10"
+    )
     assert resp_search.status_code == 200
     data = resp_search.json()
     # Only recent important memory should appear

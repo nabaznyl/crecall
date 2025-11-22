@@ -1,14 +1,16 @@
 """
 Test configuration and fixtures
 """
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
-from app.main import app
+from sqlalchemy.pool import StaticPool
+
 from app.db.models import Base
 from app.db.session import get_db
+from app.main import app
 
 # Test database (in-memory SQLite)
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -27,6 +29,7 @@ class AsyncSessionCompat:
     Provides async def methods used by service layer so legacy sync tests can
     interact with code expecting an AsyncSession without rewriting tests.
     """
+
     def __init__(self, sync_session):
         self._sync = sync_session
 
@@ -69,6 +72,7 @@ def client(db_session):
     Sets CRECALL_TEST_MODE so lifespan skips background scheduler & signals.
     """
     import os
+
     os.environ["CRECALL_TEST_MODE"] = "1"
 
     def override_get_db():

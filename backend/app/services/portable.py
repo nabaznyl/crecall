@@ -5,16 +5,21 @@ Encryption optional: if `encryption_key` provided, a simple Fernet-like scheme
 is used (requires `python-jose[cryptography]` already in requirements). Falls
 back to plain JSON if encryption libs unavailable.
 """
-import json
+
 import base64
+import json
 import zlib
-from typing import Optional, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Dict, Optional
+
 from sqlalchemy import select
-from app.db.models import Session as SessionModel, Clip, Memory
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import Clip, Memory
+from app.db.models import Session as SessionModel
 
 try:
     from jose import jwe
+
     JWE_AVAILABLE = True
 except Exception:
     JWE_AVAILABLE = False
@@ -41,7 +46,8 @@ async def export_full(db: AsyncSession, encryption_key: Optional[str] = None) ->
                 "created_at": s.created_at.isoformat() if s.created_at else None,
                 "updated_at": s.updated_at.isoformat() if s.updated_at else None,
                 "id": s.id,
-            } for s in sessions
+            }
+            for s in sessions
         ],
         "clips": [
             {
@@ -50,7 +56,8 @@ async def export_full(db: AsyncSession, encryption_key: Optional[str] = None) ->
                 "is_auto": c.is_auto,
                 "content": c.content,
                 "created_at": c.created_at.isoformat() if c.created_at else None,
-            } for c in clips
+            }
+            for c in clips
         ],
         "memories": [
             {
@@ -61,7 +68,8 @@ async def export_full(db: AsyncSession, encryption_key: Optional[str] = None) ->
                 "category": m.category,
                 "importance": m.importance,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
-            } for m in memories
+            }
+            for m in memories
         ],
     }
 
@@ -69,16 +77,24 @@ async def export_full(db: AsyncSession, encryption_key: Optional[str] = None) ->
     compressed = zlib.compress(raw, 9)
     if encryption_key and JWE_AVAILABLE:
         try:
-            protected = jwe.encrypt(compressed, encryption_key, algorithm="dir", encryption="A256GCM")
+            protected = jwe.encrypt(
+                compressed, encryption_key, algorithm="dir", encryption="A256GCM"
+            )
             return {"encrypted": True, "payload": protected}
         except Exception:
             # Fallback: return plain bundle if encryption fails (environment crypto limitations)
-            return {"encrypted": False, "payload": base64.b64encode(compressed).decode(), "encryption_error": True}
+            return {
+                "encrypted": False,
+                "payload": base64.b64encode(compressed).decode(),
+                "encryption_error": True,
+            }
     else:
         return {"encrypted": False, "payload": base64.b64encode(compressed).decode()}
 
 
-async def import_full(db: AsyncSession, payload: str, encrypted: bool, encryption_key: Optional[str] = None) -> Dict[str, Any]:
+async def import_full(
+    db: AsyncSession, payload: str, encrypted: bool, encryption_key: Optional[str] = None
+) -> Dict[str, Any]:
     if encrypted and JWE_AVAILABLE and encryption_key:
         decompressed = jwe.decrypt(payload, encryption_key)
     else:
@@ -121,7 +137,9 @@ async def import_full(db: AsyncSession, payload: str, encrypted: bool, encryptio
 
     imported_memories = 0
     for m in data.get("memories", []):
-        stmt = select(Memory).where(Memory.id == m["id"])  # naive duplicate check (id clash unlikely across machines)
+        stmt = select(Memory).where(
+            Memory.id == m["id"]
+        )  # naive duplicate check (id clash unlikely across machines)
         if (await db.execute(stmt)).scalar_one_or_none():
             continue
         new_memory = Memory(

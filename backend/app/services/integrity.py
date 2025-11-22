@@ -2,11 +2,12 @@
 
 Uses env `CRECALL_SIGNING_KEY` to sign clip content payloads.
 """
-import os
-import hmac
+
 import hashlib
+import hmac
 import json
-from typing import Optional, Dict, Any
+import os
+from typing import Any, Dict, Optional
 
 
 class Integrity:
@@ -35,7 +36,7 @@ class Integrity:
             return False
         expected = Integrity.sign_dict({k: v for k, v in payload.items() if k != "integrity"})
         return bool(expected and expected.get("sig") == integ.get("sig"))
-    
+
     @staticmethod
     def verify_dict(data: dict) -> bool:
         sig = data.get("integrity")

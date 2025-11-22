@@ -2,12 +2,13 @@
 Main FastAPI application entry point.
 """
 
-from fastapi import FastAPI, APIRouter
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 import logging
 import os
 import sys
+
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # Phase 1: Centralized config & logging initialization
 # Add parent crecall package to path for config/logging modules
@@ -15,6 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 try:
     from crecall.config import get_config
     from crecall.logging import init_logging
+
     # Initialize structured logging early
     os.environ.setdefault("DB_URL", "sqlite+aiosqlite:///./crecall.db")  # Fallback for tests
     init_logging()
@@ -27,27 +29,33 @@ except Exception as e:
     logger = logging.getLogger(__name__)
     logger.warning(f"Centralized config/logging unavailable: {e}")
 
-from app.core.config import settings
-from app.api import clips, memories, sessions, context_router
-from app.api import clipped as clipped_router
-from app.api import export_import
-from app.middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware, RequestIDMiddleware
-from app.services.metrics import metrics
-from fastapi import APIRouter, Response
-from app.services.auto_save import start_auto_save, stop_auto_save
-from app.services.crash_detector import CrashDetector
-from app.db.session import AsyncSessionLocal, engine, Base
-from app.services.session_service import SessionService
-from app.services.clip_service import ClipService
-from app.schemas.session import SessionCreate
-from app.schemas.clip import ClipCreate
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Response
+
+from app.api import clipped as clipped_router
+from app.api import clips, context_router, export_import, memories, sessions
+from app.core.config import settings
+from app.db.session import AsyncSessionLocal, Base, engine
+from app.middleware.security import (
+    RateLimitMiddleware,
+    RequestIDMiddleware,
+    SecurityHeadersMiddleware,
+)
+from app.schemas.clip import ClipCreate
+from app.schemas.session import SessionCreate
+from app.services.auto_save import start_auto_save, stop_auto_save
+from app.services.clip_service import ClipService
+from app.services.crash_detector import CrashDetector
+from app.services.metrics import metrics
+from app.services.session_service import SessionService
 
 # Global crash detector instance
 crash_detector = CrashDetector()
 
 from contextlib import asynccontextmanager
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -67,10 +75,14 @@ async def lifespan(app: FastAPI):
         logger.error(f"Schema initialization failed: {e}")
 
     # Create session + initial clip
-    session_id = f"api-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    session_id = (
+        f"api-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    )
     async with AsyncSessionLocal() as db:
         session_service = SessionService(db)
-        session = await session_service.create_session(SessionCreate(session_id=session_id, status="active"))
+        session = await session_service.create_session(
+            SessionCreate(session_id=session_id, status="active")
+        )
         clip_service = ClipService(db)
         clip = await clip_service.create_clip(
             ClipCreate(
@@ -90,6 +102,7 @@ async def lifespan(app: FastAPI):
         logger.info("Shutting down crecall API (lifespan)...")
         await stop_auto_save()
         logger.info("Auto-save scheduler stopped")
+
 
 app = FastAPI(
     title="crecall API",
@@ -126,27 +139,33 @@ app.include_router(export_import.router)
 # Documentation / OpenAPI router additions
 docs_router = APIRouter()
 
+
 @docs_router.get("/openapi.json", include_in_schema=False)
 async def openapi_json():
     """Return the live OpenAPI schema (for packaging/export)."""
     return JSONResponse(app.openapi())
 
+
 @docs_router.get("/docs/ping", include_in_schema=False)
 async def docs_ping():  # simple health for docs packaging
     return {"ok": True}
+
 
 app.include_router(docs_router)
 
 # Metrics endpoint (read-only)
 metrics_router = APIRouter()
 
+
 @metrics_router.get("/api/metrics", tags=["system"], summary="System metrics snapshot")
 async def metrics_snapshot():
     return metrics.snapshot()
 
+
 @metrics_router.get("/metrics/prom", include_in_schema=False)
 async def metrics_prom():
     return Response(metrics.prometheus(), media_type="text/plain; version=0.0.4")
+
 
 app.include_router(metrics_router)
 

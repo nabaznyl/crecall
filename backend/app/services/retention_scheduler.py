@@ -6,19 +6,25 @@ Rules:
   excluding those belonging to sessions slated for deletion (cascade handles them).
 - Dry-run mode reports counts without deleting.
 """
-from __future__ import annotations
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
 
-from app.db.models import Session, Memory
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
+
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import Memory, Session
+
 
 class RetentionScheduler:
-    def __init__(self,
-                 session_retention_days: int = 30,
-                 memory_retention_days: int = 60,
-                 importance_threshold: int = 0):
+    def __init__(
+        self,
+        session_retention_days: int = 30,
+        memory_retention_days: int = 60,
+        importance_threshold: int = 0,
+    ):
         self.session_retention_days = session_retention_days
         self.memory_retention_days = memory_retention_days
         self.importance_threshold = importance_threshold
@@ -29,7 +35,9 @@ class RetentionScheduler:
         memory_cutoff = now - timedelta(days=self.memory_retention_days)
 
         # Archived sessions older than cutoff
-        sess_stmt = select(Session.id).where(Session.status == "archived", Session.created_at < session_cutoff)
+        sess_stmt = select(Session.id).where(
+            Session.status == "archived", Session.created_at < session_cutoff
+        )
         sess_result = await db.execute(sess_stmt)
         session_ids_to_delete = [row[0] for row in sess_result.all()]
 
@@ -64,5 +72,6 @@ class RetentionScheduler:
             await db.commit()
 
         return stats
+
 
 __all__ = ["RetentionScheduler"]

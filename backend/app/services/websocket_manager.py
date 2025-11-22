@@ -3,7 +3,9 @@
 Provides a single ConnectionManager instance reused across routers and services
 to push real-time updates (sessions, clips, memories, system events).
 """
-from typing import List, Dict, Any
+
+from typing import Any, Dict, List
+
 from fastapi import WebSocket
 
 

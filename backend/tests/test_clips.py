@@ -1,6 +1,7 @@
 """
 Unit tests for Clips API endpoints
 """
+
 import pytest
 
 
@@ -29,7 +30,7 @@ class TestClipsAPI:
 
         clip_data = {**sample_clip_data, "session_id": session_identifier}
         client.post("/api/clips/", json=clip_data)
-        
+
         clip_data["name"] = "test-clip-2"
         client.post("/api/clips/", json=clip_data)
 

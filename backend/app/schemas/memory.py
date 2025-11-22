@@ -3,12 +3,14 @@ Pydantic schemas for memories.
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
 class MemoryBase(BaseModel):
     """Base memory schema."""
+
     content: str
     tags: List[str] = Field(default_factory=list)
     category: Optional[str] = None
@@ -17,6 +19,7 @@ class MemoryBase(BaseModel):
 
 class MemoryCreate(MemoryBase):
     """Schema for creating a memory."""
+
     session_id: str  # External session identifier
     linked_clip_id: Optional[str] = None  # External clip identifier (clip_id)
     linked_checkpoint_id: Optional[int] = None
@@ -24,6 +27,7 @@ class MemoryCreate(MemoryBase):
 
 class MemoryUpdate(BaseModel):
     """Schema for updating a memory."""
+
     content: Optional[str] = None
     tags: Optional[List[str]] = None
     category: Optional[str] = None
@@ -32,11 +36,12 @@ class MemoryUpdate(BaseModel):
 
 class MemoryResponse(MemoryBase):
     """Schema for memory response."""
+
     id: int
     session_id: int
     linked_clip_id: Optional[int]
     linked_checkpoint_id: Optional[int]
     created_at: datetime
     updated_at: datetime
-    
+
     model_config = {"from_attributes": True}

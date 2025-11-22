@@ -3,16 +3,20 @@
 Provides push/pull operations for exporting/importing data bundles to a
 remote host. Uses system `scp` if available; optional Paramiko fallback.
 """
+
 import os
 import shutil
-import tempfile
 import subprocess
-from typing import Optional, Dict, Any
+import tempfile
+from typing import Any, Dict, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.portable import export_full, import_full
 
 try:
     import paramiko  # type: ignore
+
     PARAMIKO_AVAILABLE = True
 except Exception:
     PARAMIKO_AVAILABLE = False
@@ -104,7 +108,9 @@ class RemoteSync:
         if status == "ok":
             with open(local_file, "r") as f:
                 payload = f.read()
-            result = await import_full(db, payload=payload, encrypted=encrypted, encryption_key=encryption_key)
+            result = await import_full(
+                db, payload=payload, encrypted=encrypted, encryption_key=encryption_key
+            )
         else:
             result = {}
 

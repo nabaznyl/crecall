@@ -1,6 +1,7 @@
 """
 Unit tests for Session API endpoints
 """
+
 import pytest
 
 
@@ -32,7 +33,7 @@ class TestSessionAPI:
         """Test listing sessions"""
         # Create multiple sessions
         client.post("/api/sessions/", json=sample_session_data)
-        
+
         sample_session_data["session_id"] = "test-session-456"
         client.post("/api/sessions/", json=sample_session_data)
 

@@ -35,20 +35,22 @@ Import rules:
 - For each session: if session_id collision, append suffix "-importN" with incremental N.
 - Insert sessions and related entities preserving timestamps.
 """
+
 from __future__ import annotations
 
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timezone
-import json
 import hashlib
+import json
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Session, Memory, Clip, Checkpoint
+from app.db.models import Checkpoint, Clip, Memory, Session
 
 ISO = "%Y-%m-%dT%H:%M:%SZ"
 SCHEMA_VERSION = 1
+
 
 class ExportService:
     def __init__(self, db: AsyncSession):
@@ -67,45 +69,74 @@ class ExportService:
             memories = s.memories
             clips = s.clips
             checkpoints = s.checkpoints
-            export_sessions.append({
-                "session_id": s.session_id,
-                "status": s.status,
-                "created_at": s.created_at.astimezone(timezone.utc).strftime(ISO) if s.created_at else None,
-                "updated_at": s.updated_at.astimezone(timezone.utc).strftime(ISO) if s.updated_at else None,
-                "memories": [
-                    {
-                        "content": m.content,
-                        "tags": m.tags or [],
-                        "category": m.category,
-                        "importance": m.importance,
-                        "created_at": m.created_at.astimezone(timezone.utc).strftime(ISO) if m.created_at else None,
-                        "updated_at": m.updated_at.astimezone(timezone.utc).strftime(ISO) if m.updated_at else None,
-                        "linked_clip_id": self._external_clip_id(m.linked_clip_id)
-                    } for m in memories
-                ],
-                "clips": [
-                    {
-                        "clip_id": c.clip_id,
-                        "is_auto": c.is_auto,
-                        "name": c.name,
-                        "created_at": c.created_at.astimezone(timezone.utc).strftime(ISO) if c.created_at else None,
-                        "working_directory": c.working_directory,
-                        "git_branch": c.git_branch,
-                        "git_commit": c.git_commit,
-                        "git_dirty": c.git_dirty,
-                        "content": c.content
-                    } for c in clips
-                ],
-                "checkpoints": [
-                    {
-                        "note": cp.note,
-                        "created_at": cp.created_at.astimezone(timezone.utc).strftime(ISO) if cp.created_at else None,
-                        "working_directory": cp.working_directory,
-                        "docker_context": cp.docker_context,
-                        "extra_data": cp.extra_data or {}
-                    } for cp in checkpoints
-                ]
-            })
+            export_sessions.append(
+                {
+                    "session_id": s.session_id,
+                    "status": s.status,
+                    "created_at": (
+                        s.created_at.astimezone(timezone.utc).strftime(ISO)
+                        if s.created_at
+                        else None
+                    ),
+                    "updated_at": (
+                        s.updated_at.astimezone(timezone.utc).strftime(ISO)
+                        if s.updated_at
+                        else None
+                    ),
+                    "memories": [
+                        {
+                            "content": m.content,
+                            "tags": m.tags or [],
+                            "category": m.category,
+                            "importance": m.importance,
+                            "created_at": (
+                                m.created_at.astimezone(timezone.utc).strftime(ISO)
+                                if m.created_at
+                                else None
+                            ),
+                            "updated_at": (
+                                m.updated_at.astimezone(timezone.utc).strftime(ISO)
+                                if m.updated_at
+                                else None
+                            ),
+                            "linked_clip_id": self._external_clip_id(m.linked_clip_id),
+                        }
+                        for m in memories
+                    ],
+                    "clips": [
+                        {
+                            "clip_id": c.clip_id,
+                            "is_auto": c.is_auto,
+                            "name": c.name,
+                            "created_at": (
+                                c.created_at.astimezone(timezone.utc).strftime(ISO)
+                                if c.created_at
+                                else None
+                            ),
+                            "working_directory": c.working_directory,
+                            "git_branch": c.git_branch,
+                            "git_commit": c.git_commit,
+                            "git_dirty": c.git_dirty,
+                            "content": c.content,
+                        }
+                        for c in clips
+                    ],
+                    "checkpoints": [
+                        {
+                            "note": cp.note,
+                            "created_at": (
+                                cp.created_at.astimezone(timezone.utc).strftime(ISO)
+                                if cp.created_at
+                                else None
+                            ),
+                            "working_directory": cp.working_directory,
+                            "docker_context": cp.docker_context,
+                            "extra_data": cp.extra_data or {},
+                        }
+                        for cp in checkpoints
+                    ],
+                }
+            )
 
         canonical = json.dumps(export_sessions, sort_keys=True, separators=(",", ":"))
         integrity_hash = "sha256-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -114,7 +145,7 @@ class ExportService:
             "schema_version": SCHEMA_VERSION,
             "generated_at": datetime.now(timezone.utc).strftime(ISO),
             "sessions": export_sessions,
-            "integrity_hash": integrity_hash
+            "integrity_hash": integrity_hash,
         }
 
     async def import_data(self, data: Dict[str, Any]) -> List[str]:
@@ -155,7 +186,7 @@ class ExportService:
                     working_directory=c.get("working_directory"),
                     git_branch=c.get("git_branch"),
                     git_commit=c.get("git_commit"),
-                    git_dirty=c.get("git_dirty", False)
+                    git_dirty=c.get("git_dirty", False),
                 )
                 self.db.add(clip)
                 await self._flush_compat()
@@ -163,14 +194,16 @@ class ExportService:
             # Memories
             for m in sess.get("memories", []):
                 linked_clip_external = m.get("linked_clip_id")
-                linked_clip_pk = clip_id_map.get(linked_clip_external) if linked_clip_external else None
+                linked_clip_pk = (
+                    clip_id_map.get(linked_clip_external) if linked_clip_external else None
+                )
                 mem = Memory(
                     session_id=s.id,
                     content=m.get("content"),
                     tags=m.get("tags") or [],
                     category=m.get("category"),
                     importance=m.get("importance", 0),
-                    linked_clip_id=linked_clip_pk
+                    linked_clip_id=linked_clip_pk,
                 )
                 self.db.add(mem)
             # Checkpoints
@@ -180,7 +213,7 @@ class ExportService:
                     note=cp.get("note"),
                     working_directory=cp.get("working_directory"),
                     docker_context=cp.get("docker_context"),
-                    extra_data=cp.get("extra_data") or {}
+                    extra_data=cp.get("extra_data") or {},
                 )
                 self.db.add(checkpoint)
             imported_ids.append(new_id)
@@ -203,5 +236,6 @@ class ExportService:
         # (Synchronous since identity map should have it if loaded; fallback query otherwise)
         # We avoid async overhead if possible; safe: small utility.
         return None  # Placeholder until needed to dereference
+
 
 __all__ = ["ExportService", "SCHEMA_VERSION"]

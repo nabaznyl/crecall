@@ -3,12 +3,14 @@ Pydantic schemas for clips.
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 
 class ClipBase(BaseModel):
     """Base clip schema."""
+
     name: Optional[str] = None
     is_auto: bool = True
     content: Dict[str, Any] = Field(default_factory=dict)
@@ -20,26 +22,29 @@ class ClipBase(BaseModel):
 
 class ClipCreate(ClipBase):
     """Schema for creating a clip."""
+
     session_id: str  # External session identifier (not internal PK)
     profile: Optional[str] = "standard"  # For clip engine: minimal, standard, complete
 
 
 class ClipResponse(ClipBase):
     """Schema for clip response."""
+
     id: int
     clip_id: str
     session_id: int
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 
 class ClipList(BaseModel):
     """Schema for clip list (minimal info)."""
+
     id: int
     clip_id: str
     name: Optional[str]
     is_auto: bool
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}

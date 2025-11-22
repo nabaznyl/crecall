@@ -8,16 +8,16 @@ restore plan generation, and integrity flagging.
 
 import asyncio
 from datetime import datetime
+
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.main import app
+from app.db.models import Clip, Session
 from app.db.session import Base
-from app.db.models import Session, Clip
-
+from app.main import app
 
 # Async in-memory database setup for these tests only
 ASYNC_DB_URL = "sqlite+aiosqlite:///:memory:"
@@ -42,7 +42,9 @@ async def async_client(db_session):
             yield db_session
         finally:
             pass
+
     from app.db.session import get_db
+
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -50,7 +52,9 @@ async def async_client(db_session):
     app.dependency_overrides.clear()
 
 
-async def create_session_helper(client: AsyncClient, sid: str = "clip-test-session") -> tuple[str, int]:
+async def create_session_helper(
+    client: AsyncClient, sid: str = "clip-test-session"
+) -> tuple[str, int]:
     """Create a session and return (session_id_string, numeric_pk)."""
     resp = await client.post("/api/sessions/", json={"session_id": sid, "status": "active"})
     assert resp.status_code == 201
@@ -74,8 +78,8 @@ async def test_clip_creation_and_listing(async_client):
         "content": {
             "clipboard": "print('hello')",
             "open_files": ["README.md", "app/main.py"],
-            "active_file": "app/main.py"
-        }
+            "active_file": "app/main.py",
+        },
     }
     resp_create = await async_client.post("/api/clips/", json=clip_payload)
     assert resp_create.status_code == 201
@@ -89,7 +93,7 @@ async def test_clip_creation_and_listing(async_client):
         "session_id": sid_str,
         "name": "auto-clip",
         "is_auto": True,
-        "content": {"clipboard": "auto", "open_files": []}
+        "content": {"clipboard": "auto", "open_files": []},
     }
     resp_auto = await async_client.post("/api/clips/", json=auto_payload)
     assert resp_auto.status_code == 201
@@ -157,7 +161,12 @@ async def test_retention_endpoints(async_client):
     sid_str, _ = await create_session_helper(async_client, sid="retention-flow")
     # Create clips
     for i in range(3):
-        payload = {"session_id": sid_str, "name": f"rclip-{i}", "is_auto": True, "content": {"r": i}}
+        payload = {
+            "session_id": sid_str,
+            "name": f"rclip-{i}",
+            "is_auto": True,
+            "content": {"r": i},
+        }
         resp = await async_client.post("/api/clips/", json=payload)
         assert resp.status_code == 201
 
@@ -168,7 +177,9 @@ async def test_retention_endpoints(async_client):
     assert "clip_keep_last" in cfg_before
 
     # Update config (PUT)
-    resp_update = await async_client.put("/api/clips/retention/config?clip_keep_last=10&auto_prune_enabled=true")
+    resp_update = await async_client.put(
+        "/api/clips/retention/config?clip_keep_last=10&auto_prune_enabled=true"
+    )
     assert resp_update.status_code == 200
     cfg_after = resp_update.json()
     assert cfg_after.get("config", {}).get("clip_keep_last") == 10
@@ -199,8 +210,8 @@ async def test_restore_plan(async_client):
         "content": {
             "clipboard": "echo restored",
             "open_files": ["main.py", "utils.py", "README.md"],
-            "active_file": "utils.py"
-        }
+            "active_file": "utils.py",
+        },
     }
     resp_create = await async_client.post("/api/clips/", json=payload)
     assert resp_create.status_code == 201
@@ -223,7 +234,7 @@ async def test_integrity_flag(async_client):
         "session_id": sid_str,
         "name": "integrity-check",
         "is_auto": False,
-        "content": {"clipboard": "data", "open_files": []}
+        "content": {"clipboard": "data", "open_files": []},
     }
     resp_create = await async_client.post("/api/clips/", json=payload)
     assert resp_create.status_code == 201
@@ -231,7 +242,9 @@ async def test_integrity_flag(async_client):
 
     # Direct DB tamper: add wrong integrity signature
     # Fetch clip row then update JSON column with mismatched signature
-    async with async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as tamper_sess:
+    async with async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )() as tamper_sess:
         result = await tamper_sess.execute(select(Clip).where(Clip.clip_id == clip_id))
         clip_obj = result.scalar_one()
         bad_content = {**clip_obj.content, "integrity": "INVALID_SIGNATURE"}

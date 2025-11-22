@@ -1,6 +1,7 @@
 """
 Unit tests for Memories API endpoints (legacy sync - updated to match current API contract)
 """
+
 import pytest
 
 
@@ -123,4 +124,3 @@ class TestMemoryImportance:
         data = response.json()
         # Results wrap memory object with score; access nested structure
         assert all(result["memory"]["importance"] >= 1 for result in data["results"])
-

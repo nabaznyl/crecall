@@ -1,12 +1,14 @@
 """Security middleware: headers, rate limiting, request ID assignment, and metrics hooks."""
+
 import time
 import uuid
-from typing import Callable, Awaitable
+from typing import Awaitable, Callable, Optional
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
 from app.services.cache import get_cache_manager
 from app.services.metrics import metrics
-from typing import Optional
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -46,6 +48,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # If CRECALL_TEST_MODE is set and header X-Force-429 present, immediately block
         # If header X-RateLimit-Override-Limit provided (int), replace effective_limit for this request
         import os
+
         if os.getenv("CRECALL_TEST_MODE") == "1":
             override_limit = request.headers.get("X-RateLimit-Override-Limit")
             if override_limit is not None:
@@ -75,7 +78,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000.0
-        metrics.observe_latency("http.request", elapsed_ms, labels={"path": request.url.path, "method": request.method, "status": str(response.status_code)})
+        metrics.observe_latency(
+            "http.request",
+            elapsed_ms,
+            labels={
+                "path": request.url.path,
+                "method": request.method,
+                "status": str(response.status_code),
+            },
+        )
         return response
 
 
@@ -84,7 +95,9 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         request_id = uuid.uuid4().hex
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
-        metrics.increment("http.request.count", labels={"path": request.url.path, "method": request.method})
+        metrics.increment(
+            "http.request.count", labels={"path": request.url.path, "method": request.method}
+        )
         return response
 
 

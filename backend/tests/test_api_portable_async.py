@@ -18,17 +18,18 @@ Notes:
 import base64
 import json
 import zlib
+
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.main import app
+from app.db.models import Clip, Memory
+from app.db.models import Session as SessionModel
 from app.db.session import Base
-from app.db.models import Session as SessionModel, Clip, Memory
+from app.main import app
 from app.services.portable import JWE_AVAILABLE
-
 
 ASYNC_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(ASYNC_DB_URL, future=True)
@@ -52,7 +53,9 @@ async def async_client(db_session):
             yield db_session
         finally:
             pass
+
     from app.db.session import get_db
+
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -71,7 +74,9 @@ async def seed_data(session: AsyncSession):
     c2 = Clip(clip_id="clip-B", session_id=s2.id, is_auto=True, content={"text": "beta"})
     # Add memories
     m1 = Memory(session_id=s1.id, content="memory one", tags=["t1"], category="catA", importance=1)
-    m2 = Memory(session_id=s2.id, content="memory two", tags=["t2", "t3"], category="catB", importance=2)
+    m2 = Memory(
+        session_id=s2.id, content="memory two", tags=["t2", "t3"], category="catB", importance=2
+    )
     session.add_all([c1, c2, m1, m2])
     await session.commit()
 
@@ -113,13 +118,17 @@ async def test_portable_import_roundtrip_plain(async_client, db_session):
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     # Import
-    resp_import = await async_client.post("/api/portable/import", json={"payload": payload, "encrypted": False})
+    resp_import = await async_client.post(
+        "/api/portable/import", json={"payload": payload, "encrypted": False}
+    )
     assert resp_import.status_code == 200
     result = resp_import.json()
     assert result["clips"] == 2
     assert result["memories"] == 2
     # Second import (duplicate) should not re-add clips/memories
-    resp_import2 = await async_client.post("/api/portable/import", json={"payload": payload, "encrypted": False})
+    resp_import2 = await async_client.post(
+        "/api/portable/import", json={"payload": payload, "encrypted": False}
+    )
     assert resp_import2.status_code == 200
     result2 = resp_import2.json()
     assert result2["clips"] == 0

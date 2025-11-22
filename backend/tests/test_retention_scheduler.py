@@ -1,15 +1,18 @@
 """Tests for retention pruning scheduler (sessions & memories)."""
-import pytest
-from datetime import datetime, timedelta, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.db.models import Session, Memory
-from app.services.retention_scheduler import RetentionScheduler
-from app.services.memory_service import MemoryService
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import Memory, Session
 from app.schemas.memory import MemoryCreate
+from app.services.memory_service import MemoryService
+from app.services.retention_scheduler import RetentionScheduler
 
 pytestmark = pytest.mark.retention_pruning
+
 
 @pytest.mark.asyncio
 async def test_retention_dry_run(db_session: AsyncSession):
@@ -49,6 +52,7 @@ async def test_retention_dry_run(db_session: AsyncSession):
     assert stats["sessions_deleted"] == 0
     assert stats["memories_deleted"] == 0
 
+
 @pytest.mark.asyncio
 async def test_retention_execute(db_session: AsyncSession):
     service = MemoryService(db_session)
@@ -79,7 +83,9 @@ async def test_retention_execute(db_session: AsyncSession):
     assert stats["memories_deleted"] == 1  # stale2
 
     # Verify deletions
-    res_sess = await db_session.execute(select(Session).where(Session.session_id == "old_archived_exec"))
+    res_sess = await db_session.execute(
+        select(Session).where(Session.session_id == "old_archived_exec")
+    )
     assert res_sess.scalar_one_or_none() is None
     res_mem = await db_session.execute(select(Memory).where(Memory.content == "stale2"))
     assert res_mem.scalar_one_or_none() is None

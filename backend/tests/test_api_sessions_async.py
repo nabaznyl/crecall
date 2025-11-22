@@ -7,14 +7,13 @@ endpoint (expected error due to uninitialized limiter).
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.main import app
-from app.db.session import Base
 from app.db.models import Session as SessionModel
-
+from app.db.session import Base
+from app.main import app
 
 ASYNC_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(ASYNC_DB_URL, future=True)
@@ -38,7 +37,9 @@ async def async_client(db_session):
             yield db_session
         finally:
             pass
+
     from app.db.session import get_db
+
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -116,7 +117,9 @@ async def test_branch_status(async_client):
 @pytest.mark.asyncio
 async def test_duplicate_session(async_client):
     await create_session(async_client, "dupe-me")
-    resp_second = await async_client.post("/api/sessions/", json={"session_id": "dupe-me", "status": "active"})
+    resp_second = await async_client.post(
+        "/api/sessions/", json={"session_id": "dupe-me", "status": "active"}
+    )
     assert resp_second.status_code == 409
     assert "already" in resp_second.text.lower()
 

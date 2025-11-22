@@ -3,11 +3,16 @@
 Analyzes recent clipped (clips) state per session to detect multiple active
 branches, conflicting heads, or potentially rogue activity.
 """
+
 from __future__ import annotations
-from typing import Dict, Any, List
+
+from typing import Any, Dict, List
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models import Session as SessionModel, Clip
+
+from app.db.models import Clip
+from app.db.models import Session as SessionModel
 
 
 class BranchSafety:
@@ -15,14 +20,19 @@ class BranchSafety:
     async def analyze(db: AsyncSession, session_identifier: str) -> Dict[str, Any]:
         # Resolve session
         session_row = (
-            await db.execute(select(SessionModel).where(SessionModel.session_id == session_identifier))
+            await db.execute(
+                select(SessionModel).where(SessionModel.session_id == session_identifier)
+            )
         ).scalar_one_or_none()
         if not session_row:
             return {"exists": False, "divergence": False, "reason": "session_not_found"}
 
         # Gather recent clips
         result = await db.execute(
-            select(Clip).where(Clip.session_id == session_row.id).order_by(Clip.created_at.desc()).limit(200)
+            select(Clip)
+            .where(Clip.session_id == session_row.id)
+            .order_by(Clip.created_at.desc())
+            .limit(200)
         )
         clips_seq = result.scalars().all()
         clips: List[Clip] = list(clips_seq)
