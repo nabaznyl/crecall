@@ -1,0 +1,18 @@
+{
+  "security": [
+    {
+      "ignore": [
+        {
+          "id": 64459,
+          "reason": "ecdsa Minerva attack CVE-2024-23342: Side-channel attack requiring physical proximity and precise timing. Web service context with network latency provides natural mitigation. Keys used server-side only. Monitoring for upstream patches.",
+          "expires": "2025-12-21"
+        },
+        {
+          "id": 64396,
+          "reason": "ecdsa side-channel vulnerability PVE-2024-64396: Python lacks timing-safe cryptographic primitives. Attack requires physical access, specialized equipment, and repeated key operations. Web service context not vulnerable. Waiting for Python 3.14+ secure alternatives.",
+          "expires": "2025-12-21"
+        }
+      ]
+    }
+  ]
+}
