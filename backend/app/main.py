@@ -94,7 +94,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="crecall API",
     description="Session recall and memory management system",
-    version="0.1.0-dev-7",
+    version="0.1.0d-7",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -156,7 +156,7 @@ async def root():
     """Root endpoint - API health check."""
     return {
         "message": "crecall API",
-        "version": "0.1.0d-6 (preview)",
+        "version": "0.1.0d-7",
         "status": "active",
         "docs": "/docs",
     }

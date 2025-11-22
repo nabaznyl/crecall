@@ -49,7 +49,8 @@ class TestMemoriesAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["count"] > 0
-        assert any("test" in m["content"].lower() for m in data["results"])
+        # Results now wrap memory object with score; access nested structure
+        assert any("test" in result["memory"]["content"].lower() for result in data["results"])
 
     def test_get_memory(self, client, sample_session_data, sample_memory_data):
         """Test retrieving a specific memory"""
@@ -120,4 +121,6 @@ class TestMemoryImportance:
         response = client.post("/api/memories/search?query=&min_importance=1")
         assert response.status_code == 200
         data = response.json()
-        assert all(m["importance"] >= 1 for m in data["results"])
+        # Results wrap memory object with score; access nested structure
+        assert all(result["memory"]["importance"] >= 1 for result in data["results"])
+

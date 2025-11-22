@@ -69,7 +69,8 @@ def test_list_sessions():
         print_test("GET /api/sessions", "FAIL")
         return False
 
-def test_get_session(session_id):
+def test_get_session(sample_session_data):
+    session_id = sample_session_data.get("session_id", "test-session")
     print_test(f"GET /api/sessions/{session_id} - Get single session")
     try:
         response = requests.get(f"{API_URL}/sessions/{session_id}", timeout=5)
@@ -91,7 +92,8 @@ def test_get_session(session_id):
         print_test(f"GET /api/sessions/{session_id}", "SKIP")
         return False
 
-def test_update_session(session_id):
+def test_update_session(sample_session_data):
+    session_id = sample_session_data.get("session_id", "test-session")
     print_test(f"PUT /api/sessions/{session_id} - Update session")
     try:
         response = requests.put(
@@ -113,7 +115,8 @@ def test_update_session(session_id):
         print_test(f"PUT /api/sessions/{session_id}", "SKIP")
         return False
 
-def test_branch_status(session_id):
+def test_branch_status(sample_session_data):
+    session_id = sample_session_data.get("session_id", "test-session")
     print_test(f"GET /api/sessions/{session_id}/branch-status - Branch safety")
     try:
         response = requests.get(f"{API_URL}/sessions/{session_id}/branch-status", timeout=5)
@@ -153,7 +156,8 @@ def test_rate_limit_admin():
         print_test("PUT /api/admin/rate-limit", "SKIP")
         return False
 
-def test_delete_session(session_id):
+def test_delete_session(sample_session_data):
+    session_id = sample_session_data.get("session_id", "test-session")
     print_test(f"DELETE /api/sessions/{session_id} - Delete session")
     try:
         response = requests.delete(f"{API_URL}/sessions/{session_id}", timeout=5)
