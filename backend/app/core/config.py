@@ -36,10 +36,14 @@ class Settings(BaseSettings):
     # Memory system
     DEFAULT_MEMORY_LIMIT: int = 20  # Default number of memories to return
     
+    # Phase 1 centralized config (optional, validated separately in crecall.config)
+    # Tolerate these extra env vars from .env to avoid validation errors
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",  # Phase 1: Allow extra env vars (ENVIRONMENT, LOG_LEVEL, BACKUP_DIR, DB_URL)
     )
 
 

@@ -4,7 +4,7 @@ Pydantic schemas for sessions.
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SessionBase(BaseModel):
@@ -14,7 +14,7 @@ class SessionBase(BaseModel):
 
 class SessionCreate(SessionBase):
     """Schema for creating a session."""
-    session_id: str
+    session_id: str = Field(..., min_length=1)  # Enforce non-empty
 
 
 class SessionUpdate(BaseModel):

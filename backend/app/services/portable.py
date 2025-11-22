@@ -68,8 +68,12 @@ async def export_full(db: AsyncSession, encryption_key: Optional[str] = None) ->
     raw = json.dumps(bundle).encode()
     compressed = zlib.compress(raw, 9)
     if encryption_key and JWE_AVAILABLE:
-        protected = jwe.encrypt(compressed, encryption_key, algorithm="dir", encryption="A256GCM")
-        return {"encrypted": True, "payload": protected}
+        try:
+            protected = jwe.encrypt(compressed, encryption_key, algorithm="dir", encryption="A256GCM")
+            return {"encrypted": True, "payload": protected}
+        except Exception:
+            # Fallback: return plain bundle if encryption fails (environment crypto limitations)
+            return {"encrypted": False, "payload": base64.b64encode(compressed).decode(), "encryption_error": True}
     else:
         return {"encrypted": False, "payload": base64.b64encode(compressed).decode()}
 

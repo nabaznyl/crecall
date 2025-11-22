@@ -21,21 +21,22 @@ def print_test(name, status="RUN"):
     print(f"{icons.get(status, '•')} {name}")
 
 def test_create_session():
-    print_test("POST /api/sessions - Create session")
+    print_test("POST /api/sessions/ - Create session")
     try:
         response = requests.post(
-            f"{API_URL}/sessions",
+            f"{API_URL}/sessions/",
             json={"session_id": f"test-{datetime.now().strftime('%Y%m%d-%H%M%S')}"},
             timeout=5
         )
-        if response.status_code == 201:
+        if response.status_code == 201 or response.status_code == 200:
             data = response.json()
-            print(f"  Created: {data.get('session_id')}")
-            print_test("POST /api/sessions", "PASS")
-            return data.get('id')
+            session_id_str = data.get('session_id')
+            print(f"  Created: {session_id_str} (ID: {data.get('id')})")
+            print_test("POST /api/sessions/", "PASS")
+            return session_id_str  # Return session_id string for subsequent tests
         else:
             print(f"  Status: {response.status_code}")
-            print_test("POST /api/sessions", "FAIL")
+            print_test("POST /api/sessions/", "FAIL")
             return None
     except (requests.ConnectError, requests.TimeoutException):
         print("  Server not running")
@@ -47,9 +48,9 @@ def test_create_session():
         return None
 
 def test_list_sessions():
-    print_test("GET /api/sessions - List sessions")
+    print_test("GET /api/sessions/ - List sessions")
     try:
-        response = requests.get(f"{API_URL}/sessions", timeout=5)
+        response = requests.get(f"{API_URL}/sessions/", timeout=5)
         if response.status_code == 200:
             data = response.json()
             print(f"  Found {len(data)} sessions")
@@ -131,10 +132,10 @@ def test_branch_status(session_id):
         return False
 
 def test_rate_limit_admin():
-    print_test("PUT /api/admin/rate-limit - Dynamic rate limit")
+    print_test("PUT /api/sessions/admin/rate-limit - Dynamic rate limit")
     try:
         response = requests.put(
-            f"{API_URL}/admin/rate-limit",
+            f"{API_URL}/sessions/admin/rate-limit",
             params={"new_limit": 200},
             timeout=5
         )

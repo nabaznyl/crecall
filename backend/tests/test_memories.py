@@ -1,5 +1,5 @@
 """
-Unit tests for Memories API endpoints
+Unit tests for Memories API endpoints (legacy sync - updated to match current API contract)
 """
 import pytest
 
@@ -11,124 +11,113 @@ class TestMemoriesAPI:
         """Test creating a new memory"""
         # Create session first
         session_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = session_response.json()["id"]
+        session_identifier = session_response.json()["session_id"]
 
-        # Create memory
-        memory_data = {**sample_memory_data, "session_id": session_id}
+        # Create memory (uses external session_id string)
+        memory_data = {**sample_memory_data, "session_id": session_identifier}
         response = client.post("/api/memories/", json=memory_data)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["content"] == sample_memory_data["content"]
         assert "id" in data
 
     def test_list_memories(self, client, sample_session_data, sample_memory_data):
         """Test listing memories"""
-        # Create session and memories
         session_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = session_response.json()["id"]
+        session_identifier = session_response.json()["session_id"]
 
-        memory_data = {**sample_memory_data, "session_id": session_id}
+        memory_data = {**sample_memory_data, "session_id": session_identifier}
         client.post("/api/memories/", json=memory_data)
-        
+
         memory_data["content"] = "Another test memory"
         client.post("/api/memories/", json=memory_data)
 
-        # List memories
         response = client.get("/api/memories/")
         assert response.status_code == 200
         data = response.json()
         assert len(data) >= 2
 
     def test_search_memories(self, client, sample_session_data, sample_memory_data):
-        """Test searching memories"""
-        # Create session and memory
+        """Test searching memories (updated endpoint: POST /search returns object)"""
         session_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = session_response.json()["id"]
+        session_identifier = session_response.json()["session_id"]
 
-        memory_data = {**sample_memory_data, "session_id": session_id}
+        memory_data = {**sample_memory_data, "session_id": session_identifier}
         client.post("/api/memories/", json=memory_data)
 
-        # Search memories
-        response = client.get("/api/memories/search?q=test")
+        response = client.post("/api/memories/search?query=test")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) > 0
-        assert any("test" in m["content"].lower() for m in data)
+        assert data["count"] > 0
+        assert any("test" in m["content"].lower() for m in data["results"])
 
     def test_get_memory(self, client, sample_session_data, sample_memory_data):
         """Test retrieving a specific memory"""
-        # Create session and memory
         session_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = session_response.json()["id"]
+        session_identifier = session_response.json()["session_id"]
 
-        memory_data = {**sample_memory_data, "session_id": session_id}
+        memory_data = {**sample_memory_data, "session_id": session_identifier}
         create_response = client.post("/api/memories/", json=memory_data)
         memory_id = create_response.json()["id"]
 
-        # Get memory
         response = client.get(f"/api/memories/{memory_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == memory_id
 
     def test_update_memory(self, client, sample_session_data, sample_memory_data):
-        """Test updating a memory"""
-        # Create session and memory
+        """Test updating a memory (importance max 2)"""
         session_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = session_response.json()["id"]
+        session_identifier = session_response.json()["session_id"]
 
-        memory_data = {**sample_memory_data, "session_id": session_id}
+        memory_data = {**sample_memory_data, "session_id": session_identifier}
         create_response = client.post("/api/memories/", json=memory_data)
         memory_id = create_response.json()["id"]
 
-        # Update memory
-        update_data = {"importance": 3, "content": "Updated memory content"}
+        update_data = {"importance": 2, "content": "Updated memory content"}
         response = client.put(f"/api/memories/{memory_id}", json=update_data)
         assert response.status_code == 200
         data = response.json()
-        assert data["importance"] == 3
+        assert data["importance"] == 2
         assert data["content"] == "Updated memory content"
 
     def test_delete_memory(self, client, sample_session_data, sample_memory_data):
-        """Test deleting a memory"""
-        # Create session and memory
+        """Test deleting a memory (expects 204)"""
         session_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = session_response.json()["id"]
+        session_identifier = session_response.json()["session_id"]
 
-        memory_data = {**sample_memory_data, "session_id": session_id}
+        memory_data = {**sample_memory_data, "session_id": session_identifier}
         create_response = client.post("/api/memories/", json=memory_data)
         memory_id = create_response.json()["id"]
 
-        # Delete memory
         response = client.delete(f"/api/memories/{memory_id}")
-        assert response.status_code == 200
+        assert response.status_code == 204
 
-        # Verify deletion
         get_response = client.get(f"/api/memories/{memory_id}")
         assert get_response.status_code == 404
 
 
 class TestMemoryImportance:
-    """Test memory importance filtering"""
+    """Test memory importance filtering (uses search endpoint)"""
 
     def test_filter_by_importance(self, client, sample_session_data):
-        """Test filtering memories by importance level"""
         session_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = session_response.json()["id"]
+        session_identifier = session_response.json()["session_id"]
 
-        # Create memories with different importance levels
-        for importance in [1, 2, 3]:
+        # Create memories within valid importance range 0-2
+        for importance in [0, 1, 2]:
             memory_data = {
-                "session_id": session_id,
+                "session_id": session_identifier,
                 "content": f"Memory with importance {importance}",
                 "importance": importance,
                 "tags": [],
                 "category": "note",
             }
-            client.post("/api/memories/", json=memory_data)
+            resp = client.post("/api/memories/", json=memory_data)
+            assert resp.status_code == 201
 
-        # Filter high-importance memories
-        response = client.get("/api/memories/?min_importance=2")
+        # Filter high-importance memories via search endpoint
+        response = client.post("/api/memories/search?query=&min_importance=1")
         assert response.status_code == 200
         data = response.json()
-        assert all(m["importance"] >= 2 for m in data)
+        assert all(m["importance"] >= 1 for m in data["results"])

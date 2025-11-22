@@ -33,3 +33,10 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+markers = [
+	"session_lifecycle: tests for session lifecycle workflow",
+	"memory_search: tests for ranked memory search workflow",
+	"export_import: tests for export/import workflow",
+	"retention_pruning: tests for retention pruning scheduler",
+	"crash_snapshot: tests for crash snapshot routine"
+]

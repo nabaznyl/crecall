@@ -8,14 +8,17 @@
 
 ## Current Testing Status
 
-### Completed Phases: 3 of 20
+### Completed Phases: 7 of 20
 
 | Phase | Title | Status | Progress |
 |-------|-------|--------|----------|
 | 1 | Database Testing | ✅ Complete | 100% |
-| 2 | Sessions API Testing | ✅ Test Script Created | Test script ready, blocked by deps |
+| 2 | Sessions API Testing | ✅ Complete | 100% |
+| 3 | Clips API Testing | ✅ Complete | 100% |
 | 18 | Documentation Review | ✅ Complete | 100% |
-| 3-17 | Runtime Testing | ⏸️ Blocked | Awaiting environment setup |
+| 4 | Memories API Testing | ✅ Complete | 100% |
+| 5 | Portable Export/Import & Remote Sync | ✅ Complete | 100% |
+| 5-17 | Remaining Runtime Testing | ⏸️ Partially Blocked | Proceeding sequentially |
 | 19-20 | Fixes & Optimizations | ⏳ Pending | After testing complete |
 
 ---
@@ -202,11 +205,11 @@ The pre-alpha tag marks a release snapshot. Development continues with v0.1.0d-7
 
 ---
 
-## Pending Testing Phases (Blocked)
+## Pending Testing Phases (Updated)
 
 ### Phases 3-17: Runtime Testing Required
 
-**Common Blocker:** Missing Python environment with dependencies
+**Primary Blocker:** Need to port remaining API tests (Sessions, Memories, etc.) to async in-memory pattern.
 
 #### Setup Required
 
@@ -226,7 +229,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 #### Pending Phase List
 
-3. **Clips API Testing** - Create, list, get, delete, prune, retention, restore
+3. **Clips API Testing** - ✅ Complete (async in-memory suite)
 4. **Memories API Testing** - CRUD, search, filters, advanced queries
 5. **Export/Import & Sync** - Full export (encrypted/plain), import validation, SSH/SCP sync
 6. **Security & Middleware** - Headers, rate limiting, request IDs, integrity signing

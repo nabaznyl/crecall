@@ -22,8 +22,13 @@ async def create_session(
 ):
     """Create a new session."""
     service = SessionService(db)
-    session = await service.create_session(session_data)
-    return session
+    try:
+        session = await service.create_session(session_data)
+        return session
+    except ValueError as e:
+        if str(e) == "duplicate_session":
+            raise HTTPException(status_code=409, detail="Session already exists")
+        raise
 
 @router.put("/admin/rate-limit", tags=["admin"], summary="Update global request per minute limit")
 async def update_rate_limit(new_limit: int):
@@ -106,3 +111,51 @@ async def branch_status(
     if not status.get("exists"):
         raise HTTPException(status_code=404, detail="Session not found")
     return status
+
+
+@router.post("/{session_id}/freeze", response_model=SessionResponse)
+async def freeze_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Freeze session (transition active → frozen)."""
+    service = SessionService(db)
+    try:
+        session = await service.freeze_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{session_id}/archive", response_model=SessionResponse)
+async def archive_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Archive session (transition frozen → archived)."""
+    service = SessionService(db)
+    try:
+        session = await service.archive_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{session_id}/activate", response_model=SessionResponse)
+async def activate_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Reactivate frozen session (transition frozen → active)."""
+    service = SessionService(db)
+    try:
+        session = await service.activate_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

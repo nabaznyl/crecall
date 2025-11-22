@@ -2,12 +2,13 @@
 Memory service - business logic for memories.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+import inspect
 from sqlalchemy import select, delete, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Memory, Session as SessionModel
+from app.db.models import Memory, Session as SessionModel, Clip
 from app.services.websocket_manager import broadcast_event
 from app.schemas.memory import MemoryCreate, MemoryUpdate
 
@@ -29,7 +30,20 @@ class MemoryService:
         if not session:
             session = SessionModel(session_id=memory_data.session_id)
             self.db.add(session)
-            await self.db.flush()
+            # Support both async and sync-style flush (fixture compatibility)
+            flush_result = self.db.flush()
+            if inspect.isawaitable(flush_result):
+                await flush_result
+        
+        # Resolve linked_clip_id from external clip_id string to internal PK
+        linked_clip_pk = None
+        if memory_data.linked_clip_id:
+            clip_result = await self.db.execute(
+                select(Clip).where(Clip.clip_id == memory_data.linked_clip_id)
+            )
+            clip = clip_result.scalar_one_or_none()
+            if clip:
+                linked_clip_pk = clip.id
         
         memory = Memory(
             session_id=session.id,
@@ -37,7 +51,7 @@ class MemoryService:
             tags=memory_data.tags,
             category=memory_data.category,
             importance=memory_data.importance,
-            linked_clip_id=memory_data.linked_clip_id,
+            linked_clip_id=linked_clip_pk,
             linked_checkpoint_id=memory_data.linked_checkpoint_id,
         )
         
@@ -131,57 +145,73 @@ class MemoryService:
         min_importance: Optional[int] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
-        tags: Optional[List[str]] = None
-    ) -> List[Memory]:
+        tags: Optional[List[str]] = None,
+        session_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Search memories with lightweight relevance ranking.
+
+        Relevance score components:
+        - Text match: counts occurrences of query terms (simple LIKE match)
+        - Recency: 1 / (age_days + 1)
+        - Importance boost: importance * 0.5
+
+        Returned objects include score for downstream experimentation.
         """
-        Advanced full-text search across memories with filtering.
-        
-        Args:
-            query: Search text (searches in content)
-            limit: Maximum results to return
-            category: Filter by category
-            min_importance: Minimum importance level (1-5)
-            date_from: Filter memories created after this date
-            date_to: Filter memories created before this date
-            tags: Filter by tags (matches any tag in list)
-        """
-        # Build base query
         stmt = select(Memory)
-        
-        # Text search
-        if query:
-            stmt = stmt.where(Memory.content.ilike(f"%{query}%"))
-        
-        # Category filter
+
+        # Scope to session if provided
+        if session_id:
+            session_result = await self.db.execute(select(SessionModel).where(SessionModel.session_id == session_id))
+            session = session_result.scalar_one_or_none()
+            if session:
+                stmt = stmt.where(Memory.session_id == session.id)
+
+        # Text search (basic LIKE) – split query into terms
+        terms = [t.strip() for t in query.split() if t.strip()]
+        if terms:
+            term_conditions = [Memory.content.ilike(f"%{t}%") for t in terms]
+            stmt = stmt.where(or_(*term_conditions))
+
         if category:
             stmt = stmt.where(Memory.category == category)
-        
-        # Importance filter
         if min_importance is not None:
             stmt = stmt.where(Memory.importance >= min_importance)
-        
-        # Date range filter
         if date_from:
             stmt = stmt.where(Memory.created_at >= date_from)
         if date_to:
             stmt = stmt.where(Memory.created_at <= date_to)
-        
-        # Tags filter (SQLite JSON support is limited, so we'll do basic containment)
-        # For production with PostgreSQL, use proper JSON operators
-        if tags:
-            tag_conditions = []
-            for tag in tags:
-                # This works for SQLite with JSON stored as text
-                tag_conditions.append(Memory.tags.cast(str).ilike(f"%{tag}%"))
-            if tag_conditions:
-                stmt = stmt.where(or_(*tag_conditions))
-        
-        # Order by relevance (most recent first, then by importance)
-        stmt = stmt.order_by(Memory.importance.desc(), Memory.created_at.desc())
-        stmt = stmt.limit(limit)
-        
-        result = await self.db.execute(stmt)
-        return result.scalars().all()
+
+        # Execute base query
+        result = await self.db.execute(stmt.order_by(Memory.created_at.desc()).limit(limit * 4))  # fetch extra for ranking prune
+        memories = result.scalars().all()
+
+        now = datetime.utcnow()
+        ranked: List[Dict[str, Any]] = []
+        for m in memories:
+            # Post-filter by tags (any match) since DB JSON LIKE differs across engines
+            if tags and m.tags:
+                if not any(tag in m.tags for tag in tags):
+                    continue
+            age_days = (now - m.created_at.replace(tzinfo=None)).days if m.created_at else 0
+            recency_score = 1 / (age_days + 1)
+            text_score = 0
+            content_lower = m.content.lower()
+            for t in terms:
+                text_score += content_lower.count(t.lower())
+            importance_score = m.importance * 0.5
+            total_score = text_score + recency_score + importance_score
+            ranked.append({
+                "memory": m,
+                "score": round(total_score, 4),
+                "components": {
+                    "text": text_score,
+                    "recency": round(recency_score, 4),
+                    "importance": importance_score
+                }
+            })
+
+        ranked.sort(key=lambda x: x["score"], reverse=True)
+        return ranked[:limit]
     
     async def get_categories(self) -> List[str]:
         """Get list of unique categories."""

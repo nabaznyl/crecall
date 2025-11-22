@@ -4,6 +4,7 @@ Test configuration and fixtures
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.db.models import Base
@@ -13,9 +14,40 @@ from app.db.session import get_db
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+class AsyncSessionCompat:
+    """Minimal async-compatible wrapper around a synchronous SQLAlchemy Session.
+
+    Provides async def methods used by service layer so legacy sync tests can
+    interact with code expecting an AsyncSession without rewriting tests.
+    """
+    def __init__(self, sync_session):
+        self._sync = sync_session
+
+    # Attribute passthrough for typical ORM usage (add, delete, etc.)
+    def __getattr__(self, item):
+        return getattr(self._sync, item)
+
+    async def execute(self, *args, **kwargs):
+        return self._sync.execute(*args, **kwargs)
+
+    async def scalar(self, *args, **kwargs):
+        return self._sync.scalar(*args, **kwargs)
+
+    async def commit(self):
+        self._sync.commit()
+
+    async def refresh(self, instance):
+        self._sync.refresh(instance)
+
+    async def close(self):
+        self._sync.close()
 
 
 @pytest.fixture(scope="function")
@@ -24,7 +56,7 @@ def db_session():
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     try:
-        yield session
+        yield AsyncSessionCompat(session)
     finally:
         session.close()
         Base.metadata.drop_all(bind=engine)
@@ -32,7 +64,12 @@ def db_session():
 
 @pytest.fixture(scope="function")
 def client(db_session):
-    """Test client with database dependency override"""
+    """Test client with database dependency override
+
+    Sets CRECALL_TEST_MODE so lifespan skips background scheduler & signals.
+    """
+    import os
+    os.environ["CRECALL_TEST_MODE"] = "1"
 
     def override_get_db():
         try:

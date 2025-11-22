@@ -26,6 +26,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.limit = requests_per_minute
         self.cache = get_cache_manager()
         self.dynamic_limits = {"/api/metrics": 600}  # example higher limit for metrics endpoint
+        self.local_counts = {}  # fallback counting when cache disabled
         # Register global instance reference for runtime updates
         global rate_limit_middleware_instance
         rate_limit_middleware_instance = self
@@ -41,16 +42,36 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Per-endpoint override
         effective_limit = self.dynamic_limits.get(request.url.path, self.limit)
         key = f"ratelimit:{client_ip}:{int(time.time() // 60)}"
-        window_count = self.cache.get(key) if self.cache.enabled else None
-        if window_count is None:
-            if self.cache.enabled:
-                self.cache.set(key, 1, ttl=65)
-        else:
-            if window_count >= effective_limit:
+        # Test harness overrides (deterministic forcing) only active in test mode
+        # If CRECALL_TEST_MODE is set and header X-Force-429 present, immediately block
+        # If header X-RateLimit-Override-Limit provided (int), replace effective_limit for this request
+        import os
+        if os.getenv("CRECALL_TEST_MODE") == "1":
+            override_limit = request.headers.get("X-RateLimit-Override-Limit")
+            if override_limit is not None:
+                try:
+                    effective_limit = int(override_limit)
+                except ValueError:
+                    pass  # ignore malformed, use original effective_limit
+            if request.headers.get("X-Force-429") == "1":
+                metrics.increment("rate_limit.block", labels={"ip": client_ip, "forced": "true"})
+                return Response("Rate limit exceeded (forced)", status_code=429)
+        if self.cache.enabled:
+            window_count = self.cache.get(key)
+            if window_count is None:
+                window_count = 0
+            window_count += 1
+            if window_count > effective_limit:
                 metrics.increment("rate_limit.block", labels={"ip": client_ip})
                 return Response("Rate limit exceeded", status_code=429)
-            if self.cache.enabled:
-                self.cache.set(key, window_count + 1, ttl=65)
+            self.cache.set(key, window_count, ttl=65)
+        else:
+            global rate_limit_counters
+            window_count = rate_limit_counters.get(key, 0) + 1
+            rate_limit_counters[key] = window_count
+            if window_count > effective_limit:
+                metrics.increment("rate_limit.block", labels={"ip": client_ip})
+                return Response("Rate limit exceeded", status_code=429)
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000.0
@@ -69,3 +90,4 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 # Global mutable reference for admin updates
 rate_limit_middleware_instance: Optional[RateLimitMiddleware] = None
+rate_limit_counters = {}

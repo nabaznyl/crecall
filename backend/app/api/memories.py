@@ -9,6 +9,7 @@ from datetime import datetime
 
 from app.db.session import get_db
 from app.schemas.memory import MemoryCreate, MemoryResponse, MemoryUpdate
+from typing import Dict, Any
 from app.services.memory_service import MemoryService
 
 router = APIRouter()
@@ -46,47 +47,51 @@ async def list_memories(
 
 @router.post("/search")
 async def search_memories(
-    query: Optional[str] = None,
+    query: str = Query("", description="Search text (may be blank for filter-only searches)"),
     limit: int = Query(20, ge=1, le=100),
     category: Optional[str] = None,
-    min_importance: Optional[int] = Query(None, ge=1, le=5),
+    min_importance: Optional[int] = Query(None, ge=0, le=2),
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     tags: Optional[List[str]] = Query(None),
+    session_id: Optional[str] = Query(None, description="Scope search to a session"),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Advanced full-text search across memories with filters.
-    
-    - **query**: Search text (searches in content)
-    - **limit**: Maximum results (1-100)
-    - **category**: Filter by category
-    - **min_importance**: Minimum importance level (1-5)
-    - **date_from**: Start date (ISO format)
-    - **date_to**: End date (ISO format)
-    - **tags**: Filter by tags (matches any)
+    """Ranked memory search.
+
+    Scoring = text_match_count + (1/(age_days+1)) + importance*0.5
+    Returns score breakdown per memory for experimentation.
     """
     service = MemoryService(db)
-    results = await service.search_memories(
-        query=query or "",
+    ranked = await service.search_memories(
+        query=query,
         limit=limit,
         category=category,
         min_importance=min_importance,
         date_from=date_from,
         date_to=date_to,
-        tags=tags
+        tags=tags,
+        session_id=session_id
     )
     return {
-        "results": results,
-        "count": len(results),
         "query": query,
+        "count": len(ranked),
+        "results": [
+            {
+                "memory": r["memory"],
+                "score": r["score"],
+                "components": r["components"],
+            } for r in ranked
+        ],
         "filters": {
             "category": category,
             "min_importance": min_importance,
             "date_from": date_from,
             "date_to": date_to,
-            "tags": tags
-        }
+            "tags": tags,
+            "session_id": session_id
+        },
+        "scoring_formula": "text + recency + importance*0.5"
     }
 
 

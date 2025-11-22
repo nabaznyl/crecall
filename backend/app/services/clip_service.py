@@ -2,7 +2,7 @@
 Clip service - business logic for clips.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,11 +23,19 @@ class ClipService:
     
     async def create_clip(self, clip_data: ClipCreate) -> Clip:
         """Create a new clip."""
-        # session_id in ClipCreate is now an integer FK, not a session_id string lookup
-        # No need to look up session - just use the provided ID
+        # Resolve external session_id string to internal PK
+        session_result = await self.db.execute(
+            select(SessionModel).where(SessionModel.session_id == clip_data.session_id)
+        )
+        session = session_result.scalar_one_or_none()
+        if not session:
+            # Create session if it doesn't exist
+            session = SessionModel(session_id=clip_data.session_id)
+            self.db.add(session)
+            await self.db.flush()
         
         # Generate clip ID
-        clip_id = f"clip-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+        clip_id = f"clip-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
         
         # Compute integrity signature for content if possible
         content_payload = clip_data.content
@@ -38,7 +46,7 @@ class ClipService:
 
         clip = Clip(
             clip_id=clip_id,
-            session_id=clip_data.session_id,  # This is already an integer FK
+            session_id=session.id,  # Use internal PK
             name=clip_data.name,
             is_auto=clip_data.is_auto,
             content=content_payload,
@@ -130,7 +138,7 @@ class ClipService:
         
         # Also delete clips older than specified days
         if older_than_days:
-            cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
             for clip in all_clips:
                 raw_created = getattr(clip, "created_at", None)
                 created_at_val = raw_created if isinstance(raw_created, datetime) else None

@@ -8,6 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime, timezone
 import asyncio
+import os
 import logging
 from typing import Optional
 
@@ -120,6 +121,10 @@ def get_scheduler() -> AutoSaveScheduler:
 
 async def start_auto_save():
     """Start the auto-save system."""
+    # Skip scheduler during test mode to avoid event loop threading issues
+    if os.getenv("CRECALL_TEST_MODE"):
+        logger.debug("Test mode active; skipping auto-save scheduler start.")
+        return
     scheduler = get_scheduler()
     scheduler.start()
 

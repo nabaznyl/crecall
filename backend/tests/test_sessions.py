@@ -10,7 +10,7 @@ class TestSessionAPI:
     def test_create_session(self, client, sample_session_data):
         """Test creating a new session"""
         response = client.post("/api/sessions/", json=sample_session_data)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["session_id"] == sample_session_data["session_id"]
         assert data["status"] == "active"
@@ -20,13 +20,12 @@ class TestSessionAPI:
         """Test retrieving a session"""
         # Create session first
         create_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = create_response.json()["id"]
+        session_identifier = create_response.json()["session_id"]
 
-        # Get session
-        response = client.get(f"/api/sessions/{session_id}")
+        # Get session by external session_id
+        response = client.get(f"/api/sessions/{session_identifier}")
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == session_id
         assert data["session_id"] == sample_session_data["session_id"]
 
     def test_list_sessions(self, client, sample_session_data):
@@ -47,11 +46,11 @@ class TestSessionAPI:
         """Test updating a session"""
         # Create session
         create_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = create_response.json()["id"]
+        session_identifier = create_response.json()["session_id"]
 
-        # Update session
+        # Update session using external session_id
         update_data = {"status": "paused"}
-        response = client.put(f"/api/sessions/{session_id}", json=update_data)
+        response = client.put(f"/api/sessions/{session_identifier}", json=update_data)
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "paused"
@@ -60,14 +59,14 @@ class TestSessionAPI:
         """Test deleting a session"""
         # Create session
         create_response = client.post("/api/sessions/", json=sample_session_data)
-        session_id = create_response.json()["id"]
+        session_identifier = create_response.json()["session_id"]
 
-        # Delete session
-        response = client.delete(f"/api/sessions/{session_id}")
-        assert response.status_code == 200
+        # Delete session using external session_id
+        response = client.delete(f"/api/sessions/{session_identifier}")
+        assert response.status_code == 204
 
         # Verify deletion
-        get_response = client.get(f"/api/sessions/{session_id}")
+        get_response = client.get(f"/api/sessions/{session_identifier}")
         assert get_response.status_code == 404
 
 
@@ -87,5 +86,4 @@ class TestSessionValidation:
 
         # Try to create duplicate
         response = client.post("/api/sessions/", json=sample_session_data)
-        # Should either succeed (if allowed) or fail with appropriate error
-        assert response.status_code in [200, 400, 409]
+        assert response.status_code == 409

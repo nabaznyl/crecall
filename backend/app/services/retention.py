@@ -7,11 +7,14 @@ import os
 import json
 import logging
 from typing import List, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
+
+from datetime import datetime, timedelta, timezone
+
 from app.services.metrics import metrics
 from app.db.models import Clip
-from datetime import datetime, timedelta
 
 
 class ClipRetentionManager:
@@ -112,8 +115,11 @@ class ClipRetentionManager:
         
         # Preserve recent clips (last hour)
         created_at_val = getattr(clip, "created_at", None)
-        if isinstance(created_at_val, datetime) and (datetime.utcnow() - created_at_val) < timedelta(hours=1):
-            return True
+        if isinstance(created_at_val, datetime):
+            if created_at_val.tzinfo is None:
+                created_at_val = created_at_val.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - created_at_val) < timedelta(hours=1):
+                return True
         
         # Preserve clips with important metadata
         content_val = getattr(clip, "content", None)
@@ -205,7 +211,11 @@ class ClipRetentionManager:
             if (clip.get("is_auto") is False) and self.config.get("preserve_manual_clips", True):
                 preserve = True
             created_at_val = clip.get("created_at")
-            if not preserve and isinstance(created_at_val, datetime) and (datetime.utcnow() - created_at_val) < timedelta(hours=1):
+            if not preserve and isinstance(created_at_val, datetime):
+                if created_at_val.tzinfo is None:
+                    created_at_val = created_at_val.replace(tzinfo=timezone.utc)
+                if (datetime.now(timezone.utc) - created_at_val) < timedelta(hours=1):
+                    preserve = True
                 preserve = True
             content_val = clip.get("content")
             if not preserve and isinstance(content_val, dict):
@@ -301,7 +311,6 @@ class ClipRetentionManager:
         
         retention_limit = self.get_retention_limit()
         usage_percent = (counts["total"] / retention_limit * 100) if retention_limit > 0 else 0
-        
         return {
             "counts": counts,
             "retention_limit": retention_limit,

@@ -6,6 +6,26 @@ from fastapi import FastAPI, APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import os
+import sys
+
+# Phase 1: Centralized config & logging initialization
+# Add parent crecall package to path for config/logging modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+try:
+    from crecall.config import get_config
+    from crecall.logging import init_logging
+    # Initialize structured logging early
+    os.environ.setdefault("DB_URL", "sqlite+aiosqlite:///./crecall.db")  # Fallback for tests
+    init_logging()
+    _app_config = get_config()
+    logger = logging.getLogger(__name__)
+    logger.info("Centralized config loaded", extra={"environment": _app_config.environment})
+except Exception as e:
+    # Fallback to basic logging if centralized config unavailable
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Centralized config/logging unavailable: {e}")
 
 from app.core.config import settings
 from app.api import clips, memories, sessions, context_router
@@ -16,18 +36,60 @@ from app.services.metrics import metrics
 from fastapi import APIRouter, Response
 from app.services.auto_save import start_auto_save, stop_auto_save
 from app.services.crash_detector import CrashDetector
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, engine, Base
 from app.services.session_service import SessionService
 from app.services.clip_service import ClipService
 from app.schemas.session import SessionCreate
 from app.schemas.clip import ClipCreate
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
-
-logger = logging.getLogger(__name__)
 
 # Global crash detector instance
 crash_detector = CrashDetector()
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting crecall API (lifespan)...")
+    crash_info = CrashDetector.check_for_crash()
+    if crash_info:
+        logger.warning("Detected crash from previous session!")
+        logger.info(f"Previous session: {crash_info.get('session_id')}")
+        logger.info(f"Last clip: {crash_info.get('last_clip_id')}")
+        logger.info("Recovery available via 'crecall-recover' CLI")
+
+    # Ensure schema exists (covers in-memory / first run)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        logger.error(f"Schema initialization failed: {e}")
+
+    # Create session + initial clip
+    session_id = f"api-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    async with AsyncSessionLocal() as db:
+        session_service = SessionService(db)
+        session = await session_service.create_session(SessionCreate(session_id=session_id, status="active"))
+        clip_service = ClipService(db)
+        clip = await clip_service.create_clip(
+            ClipCreate(
+                session_id=session.session_id,  # Use external session_id (string), not internal PK
+                content={"type": "startup", "message": "API started"},
+                profile="minimal",
+            )
+        )
+        crash_detector.register_session(session_id, str(clip.id))
+        logger.info(f"Session registered: {session_id}")
+
+    await start_auto_save()
+    logger.info("Auto-save scheduler started")
+    try:
+        yield
+    finally:
+        logger.info("Shutting down crecall API (lifespan)...")
+        await stop_auto_save()
+        logger.info("Auto-save scheduler stopped")
 
 app = FastAPI(
     title="crecall API",
@@ -35,6 +97,7 @@ app = FastAPI(
     version="0.1.0-dev-7",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # CORS middleware for frontend access
@@ -47,9 +110,10 @@ app.add_middleware(
 )
 
 # Security middleware stack
+rate_limit_middleware = RateLimitMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
-app.add_middleware(RateLimitMiddleware)
+app.add_middleware(rate_limit_middleware)
 
 # Include routers
 app.include_router(clips.router, prefix="/api/clips", tags=["clips"])
@@ -104,51 +168,4 @@ async def health_check():
     return {"status": "healthy"}
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Run on application startup."""
-    logger.info("Starting crecall API...")
-    
-    # Check for crash from previous session
-    crash_info = CrashDetector.check_for_crash()
-    if crash_info:
-        logger.warning("Detected crash from previous session!")
-        logger.info(f"Previous session: {crash_info.get('session_id')}")
-        logger.info(f"Last clip: {crash_info.get('last_clip_id')}")
-        logger.info("Recovery available via 'crecall-recover' CLI")
-    
-    # Create session for this API instance
-    session_id = f"api-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
-    
-    async with AsyncSessionLocal() as db:
-        session_service = SessionService(db)
-        session = await session_service.create_session(
-            SessionCreate(session_id=session_id, status="active")
-        )
-        
-        # Create initial clip
-        clip_service = ClipService(db)
-        clip = await clip_service.create_clip(
-            ClipCreate(
-                session_id=session.id,
-                content={"type": "startup", "message": "API started"},
-                profile="minimal"
-            )
-        )
-        
-        # Register with crash detector
-        crash_detector.register_session(session_id, str(clip.id))
-        logger.info(f"Session registered: {session_id}")
-    
-    # Start auto-save scheduler
-    await start_auto_save()
-    logger.info("Auto-save scheduler started")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Run on application shutdown."""
-    logger.info("Shutting down crecall API...")
-    # Stop auto-save scheduler
-    await stop_auto_save()
-    logger.info("Auto-save scheduler stopped")
+## Deprecated startup/shutdown events replaced by lifespan above.

@@ -19,6 +19,12 @@ class SessionService:
     
     async def create_session(self, session_data: SessionCreate) -> SessionModel:
         """Create a new session."""
+        # Duplicate guard
+        existing = await self.db.execute(
+            select(SessionModel).where(SessionModel.session_id == session_data.session_id)
+        )
+        if existing.scalar_one_or_none() is not None:
+            raise ValueError("duplicate_session")
         session = SessionModel(
             session_id=session_data.session_id,
             status=session_data.status,
@@ -143,3 +149,59 @@ class SessionService:
             cache.set(cache_key, summary, ttl=300)
 
         return summary
+    
+    async def freeze_session(self, session_id: str) -> Optional[SessionModel]:
+        """Freeze session (active → frozen). Prevents new clips except recovery."""
+        session = await self.get_session(session_id)
+        if not session:
+            return None
+        
+        if session.status != "active":
+            raise ValueError(f"Cannot freeze session with status '{session.status}' (must be active)")
+        
+        session.status = "frozen"
+        await self.db.commit()
+        await self.db.refresh(session)
+        
+        self._invalidate_session_cache(session_id)
+        return session
+    
+    async def archive_session(self, session_id: str) -> Optional[SessionModel]:
+        """Archive session (frozen → archived). Eligible for retention pruning."""
+        session = await self.get_session(session_id)
+        if not session:
+            return None
+        
+        if session.status != "frozen":
+            raise ValueError(f"Cannot archive session with status '{session.status}' (must be frozen first)")
+        
+        session.status = "archived"
+        await self.db.commit()
+        await self.db.refresh(session)
+        
+        self._invalidate_session_cache(session_id)
+        return session
+    
+    async def activate_session(self, session_id: str) -> Optional[SessionModel]:
+        """Reactivate frozen session (frozen → active)."""
+        session = await self.get_session(session_id)
+        if not session:
+            return None
+        
+        if session.status != "frozen":
+            raise ValueError(f"Cannot activate session with status '{session.status}' (must be frozen)")
+        
+        session.status = "active"
+        await self.db.commit()
+        await self.db.refresh(session)
+        
+        self._invalidate_session_cache(session_id)
+        return session
+    
+    def _invalidate_session_cache(self, session_id: str) -> None:
+        """Invalidate all cache entries for a session."""
+        cache = get_cache_manager()
+        if cache.enabled:
+            cache.delete(f"session:{session_id}")
+            cache.delete(f"session:summary:{session_id}")
+            cache.delete("sessions:list:50")  # common list cache

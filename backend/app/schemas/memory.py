@@ -17,8 +17,8 @@ class MemoryBase(BaseModel):
 
 class MemoryCreate(MemoryBase):
     """Schema for creating a memory."""
-    session_id: str
-    linked_clip_id: Optional[int] = None
+    session_id: str  # External session identifier
+    linked_clip_id: Optional[str] = None  # External clip identifier (clip_id)
     linked_checkpoint_id: Optional[int] = None
 
 

@@ -8,7 +8,7 @@ that capture the complete development context with minimal storage footprint.
 import json
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
@@ -37,7 +37,7 @@ class ClipEngine:
             Dict containing clip data
         """
         clip = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             "name": name,
             "is_auto": is_auto,
             "profile": profile,

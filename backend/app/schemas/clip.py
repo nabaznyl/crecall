@@ -20,7 +20,7 @@ class ClipBase(BaseModel):
 
 class ClipCreate(ClipBase):
     """Schema for creating a clip."""
-    session_id: int
+    session_id: str  # External session identifier (not internal PK)
     profile: Optional[str] = "standard"  # For clip engine: minimal, standard, complete
 
 

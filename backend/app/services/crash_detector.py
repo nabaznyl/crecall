@@ -9,6 +9,7 @@ import json
 import atexit
 import signal
 import sys
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -54,8 +55,20 @@ class CrashDetector:
         
         # Register cleanup handlers
         atexit.register(self._clean_shutdown)
-        signal.signal(signal.SIGTERM, self._signal_handler)
-        signal.signal(signal.SIGINT, self._signal_handler)
+
+        # Skip signal handler registration in non-main threads (e.g., test runners)
+        # or when test mode is enabled to avoid ValueError: signal only works in main thread.
+        if os.getenv("CRECALL_TEST_MODE"):
+            logger.debug("Test mode detected; skipping signal handler registration.")
+        elif threading.current_thread() is threading.main_thread():
+            try:
+                signal.signal(signal.SIGTERM, self._signal_handler)
+                signal.signal(signal.SIGINT, self._signal_handler)
+            except ValueError:
+                # Fallback: skip if interpreter restrictions apply
+                logger.debug("Signal registration failed; running in restricted context.")
+        else:
+            logger.debug("Not main thread; skipping signal handler registration.")
         
         logger.info(f"Crash detection registered for session: {session_id}")
     
