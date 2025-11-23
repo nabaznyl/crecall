@@ -136,6 +136,14 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(rate_limit_middleware)
 
+# Attempt to auto-instrument the FastAPI app if OpenTelemetry is available.
+try:
+    from app.observability import instrument_app
+
+    instrument_app(app)
+except Exception:
+    logger.debug("FastAPI instrumentation not applied (not available or failed)")
+
 # Include routers
 app.include_router(clips.router, prefix="/api/clips", tags=["clips"])
 app.include_router(clipped_router.router, prefix="/api/clipped", tags=["clipped"])
