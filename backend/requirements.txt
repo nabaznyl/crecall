@@ -38,7 +38,8 @@ pytest-benchmark==5.2.3
 # Observability
 opentelemetry-api==1.22.0
 opentelemetry-sdk==1.22.0
-opentelemetry-instrumentation-fastapi==0.36b0
+# Optional FastAPI instrumentation: comment out by default to avoid dependency conflicts.
+# opentelemetry-instrumentation-fastapi==0.36b0
 opentelemetry-exporter-otlp-proto-http==1.22.0
 
 # License compliance
