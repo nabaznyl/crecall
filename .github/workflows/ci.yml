@@ -198,6 +198,8 @@ jobs:
     name: License Compliance Scan
     runs-on: ubuntu-latest
     needs: quality
+    env:
+      DISALLOWED_LICENSES: "AGPL, GPL-3.0, GPL-2.0, LGPL"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python

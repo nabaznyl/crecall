@@ -26,6 +26,14 @@ jobs:
           mkdir -p benchmarks
           TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
           pytest tests/benchmarks --benchmark-only --benchmark-json=benchmarks/results-${TIMESTAMP}.json
+      - name: Check benchmark regressions
+        working-directory: backend
+        env:
+          REGRESSION_THRESHOLD: '0.05'
+        run: |
+          LATEST=$(ls benchmarks/*.json | sort | tail -n1)
+          echo "Comparing $LATEST against baseline 'benchmarks/baseline.json' (threshold=${REGRESSION_THRESHOLD})"
+          python3 benchmarks/check_regressions.py --baseline benchmarks/baseline.json --current "$LATEST" --threshold ${REGRESSION_THRESHOLD}
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         with:
