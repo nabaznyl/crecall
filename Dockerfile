@@ -9,7 +9,7 @@ ARG NODE_VERSION=20
 # ============================================================================
 # Stage 1: Backend Builder
 # ============================================================================
-FROM python:${PYTHON_VERSION}-slim as backend-builder
+FROM python:${PYTHON_VERSION}-slim AS backend-builder
 
 WORKDIR /build
 
@@ -34,7 +34,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ============================================================================
 # Stage 2: Frontend Builder
 # ============================================================================
-FROM node:${NODE_VERSION}-alpine as frontend-builder
+FROM node:${NODE_VERSION}-alpine AS frontend-builder
 
 WORKDIR /build
 
@@ -58,7 +58,7 @@ FROM python:${PYTHON_VERSION}-slim
 LABEL org.opencontainers.image.title="crecall"
 LABEL org.opencontainers.image.description="Continuous Recall Memory System"
 LABEL org.opencontainers.image.source="https://github.com/crecall/crecall"
-LABEL org.opencontainers.image.version="${BUILD_CHANNEL}"
+LABEL org.opencontainers.image.version="stable"
 LABEL org.opencontainers.image.licenses="Proprietary"
 
 # Install runtime dependencies
@@ -66,10 +66,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    tini \
+    && rm -rf /var/lib/apt/lists/* && \
+    useradd -m -u 1000 -s /usr/sbin/nologin crecall && \
+    mkdir -p /home/crecall/.recall_memory && chown -R 1000:1000 /home/crecall
 
 # Create app user
-RUN useradd -m -u 1000 -s /bin/bash crecall
+# user already created above
 
 WORKDIR /app
 
@@ -87,8 +90,7 @@ COPY bin/crecall-recover /usr/local/bin/crecall-recover
 RUN chmod +x /usr/local/bin/crecall /usr/local/bin/crecall-recover
 
 # Create data directory
-RUN mkdir -p /root/.recall_memory && \
-    chown -R crecall:crecall /root/.recall_memory
+RUN mkdir -p /app/tmp && chown -R 1000:1000 /app/tmp
 
 # Expose backend port
 EXPOSE 8000
@@ -98,4 +100,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -fs http://localhost:8000/health && curl -fs http://localhost:8000/docs >/dev/null || exit 1
 
 # Default command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+USER 1000
+ENTRYPOINT ["tini", "--"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

@@ -1,0 +1,12 @@
+title = "crecall gitleaks config"
+
+# Allowlist for patterns that should not trigger findings
+[allowlist]
+  description = "Global allowlist"
+  regexes = [
+    "-----BEGIN PUBLIC KEY-----",
+    "-----BEGIN RSA PUBLIC KEY-----",
+    "-----BEGIN OPENSSH PUBLIC KEY-----"
+  ]
+
+# No custom rules yet; using default gitleaks detectors.

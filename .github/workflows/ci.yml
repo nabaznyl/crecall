@@ -125,4 +125,56 @@ jobs:
           path: |
             backend/backend-cyclonedx-sbom.json
             frontend/frontend-cyclonedx-sbom.json
+
+  secret-scan:
+    name: Secret Scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for better scanning
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+          fail: true
+      - name: Upload gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+
+  container-harden:
+    name: Container Build & Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build production image
+        run: |
+          docker build -t crecall:ci -f Dockerfile .
+      - name: Scan image with Trivy (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: crecall:ci
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Export Trivy SBOM (CycloneDX)
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: crecall:ci
+          format: 'cyclonedx'
+          output: 'trivy-image-sbom.json'
+      - name: Upload container scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-security
+          path: trivy-image-sbom.json
         
