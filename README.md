@@ -134,6 +134,24 @@ pylint app/                  # Lint
 ./scripts/build-nightly.sh
 ```
 
+### Pre-commit Hooks
+Install and activate automated formatting & security checks:
+```bash
+pip install pre-commit
+pre-commit install
+```
+Hooks run on staged changes (Black, Ruff, pip-audit, basic hygiene). Use `SKIP=pip-audit git commit -m ...` to bypass selectively.
+
+### Type Checking (Mypy)
+Run incremental static analysis:
+```bash
+mypy app
+```
+Configuration lives in `backend/pyproject.toml` under `[tool.mypy]`.
+
+### SBOM Generation (CI)
+CycloneDX SBOMs (Python & Node) produced automatically in CI (`sbom` job). Artifacts appear under `sbom-artifacts` in workflow runs.
+
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for complete guide.
 
 ---
