@@ -76,9 +76,10 @@ See [docs/installation.md](docs/installation.md) for complete setup.
 - ✅ External vs internal identifier pattern
 - ✅ Crash-safe startup (deterministic, gated background tasks)
 - ✅ Centralized config & structured logging
-- ✅ 49/49 passing tests (async + legacy suites)
+- ✅ 84 passing tests + comprehensive test coverage
 - ✅ Professional build infrastructure (stable/nightly/dev)
 - ✅ PostgreSQL migration support
+- ✅ CI/CD with automated quality checks (Black, Ruff, pytest)
 
 **Planned (Roadmap)**:
 - 🔜 Instant recall from lightweight clips
@@ -156,7 +157,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for workflow & standards.
 
 ## License
 
-TBD - Project license to be determined. See [BRAND_LICENSE_AGREEMENT.md](BRAND_LICENSE_AGREEMENT.md) for protective draft.
+[MIT License](LICENSE) - See LICENSE file for details.
 
 ---
 
