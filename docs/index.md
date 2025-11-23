@@ -28,6 +28,8 @@
 ## Specialized Topics
 - [**Security Protocols**](SECURITY_PROTOCOLS.md) - Hardening roadmap
 - [**Contributing**](contributing.md) - How to contribute to crecall
+ - [**Observability & OTEL**](observability.md) - How to run OTEL smoke-tests and CI previews
+ - [**Mutation Testing**](FEATURES/mutation-testing.md) - Plan and nightly mutation-test job
 
 ## Historical Archive
 Root-level legacy docs (`INSTALL.md`, `PATCH_NOTES.md`, `README.md`) superseded by docs/ structure. See `archive/legacy_notes/` for historical notes.
@@ -36,4 +38,4 @@ Root-level legacy docs (`INSTALL.md`, `PATCH_NOTES.md`, `README.md`) superseded 
 
 **Navigation Tip**: All paths relative to `/home/anonmaly/crecall/docs/`.
 
-Index version 0.2 (2025-11-21)
+Index version 0.3 (2025-11-23)

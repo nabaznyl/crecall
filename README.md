@@ -157,6 +157,23 @@ mypy app
 ```
 Configuration lives in `backend/pyproject.toml` under `[tool.mypy]`.
 
+## CI & Observability
+
+Quick references for the CI observability and smoke-test helpers added to this repository:
+
+- **OTEL smoke-tests:** Two CI jobs validate OpenTelemetry:
+	- `otel-import-check` (fast) verifies OTEL packages import cleanly across Python versions.
+	- `otel-integration` (full) installs runtime deps and runs an in-memory OTEL integration smoke test that asserts spans are produced.
+
+- **Run smoke checks locally:**
+	- Install import-check deps: `pip install -r backend/requirements-otel.txt`
+	- Run the lightweight import check: `python .github/scripts/otel_smoke.py`
+	- For integration smoke (requires app code): run the app in a venv or rely on the script which imports `backend/app`; the integration script uses a `TestClient` and will run without network: `python .github/scripts/otel_integration_smoke.py`.
+
+- **Fetch CI artifacts:** A helper script `./.automation/ci_fetch_artifacts.sh` can dispatch the `otel-smoke` workflow, poll for completion and download artifacts. It requires a GitHub token with access to the repo set as `GITHUB_TOKEN`.
+
+See `docs/observability.md` for more details and examples.
+
 ### SBOM Generation (CI)
 CycloneDX SBOMs (Python & Node) produced automatically in CI (`sbom` job). Artifacts appear under `sbom-artifacts` in workflow runs.
 

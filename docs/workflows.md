@@ -80,3 +80,17 @@ Move or back up all entities with stable external references preserving relation
 
 ---
 END WORKFLOWS DRAFT
+ 
+## CI & Observability
+
+The repository includes CI checks and smoke-tests focused on OpenTelemetry (OTEL) instrumentation and nightly mutation testing.
+
+- **OTEL smoke (split jobs):** The OTEL smoke workflow is split into two jobs:
+   - `otel-import-check` — lightweight import validation across Python versions (3.11–3.13). This job ensures required OTEL packages import cleanly and emits warnings for optional instrumentations.
+   - `otel-integration` — installs runtime dependencies and runs an in-memory OTEL integration smoke test that boots the app (TestClient) and asserts that spans are produced. Integration job posts a short preview comment to the PR using the workflow token.
+
+- **Why split?** Splitting keeps the fast import-check cheap (no full app deps) while still providing a fuller integration verification in a separate job that installs runtime packages.
+
+- **Mutation Testing:** A nightly `mutation-testing` job runs `mutmut` against the test suite to warn about weak tests. See `docs/FEATURES/mutation-testing.md` for policy and remediation guidance.
+
+When modifying CI or instrumentation, prefer the `otel-import-check` job for quick validation and the `otel-integration` job for runtime verification.
