@@ -2,7 +2,7 @@
 Database models for crecall.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -19,11 +19,11 @@ class Session(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(100), unique=True, index=True, nullable=False)
     status = Column(String(20), default="active")  # active, paused, archived
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
     theme_preference = Column(String(10), default="dark")  # placeholder per-user theme
 
@@ -54,7 +54,7 @@ class Clip(Base):
     git_commit = Column(String(40))
     git_dirty = Column(Boolean, default=False)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
 
     # Relationships
     session = relationship("Session", back_populates="clips")
@@ -81,11 +81,11 @@ class Memory(Base):
     linked_clip_id = Column(Integer, ForeignKey("clips.id"), nullable=True)
     linked_checkpoint_id = Column(Integer, ForeignKey("checkpoints.id"), nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     # Relationships
@@ -110,7 +110,7 @@ class Checkpoint(Base):
     # Additional metadata
     extra_data = Column(JSON, default=dict)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
 
     # Relationships
     session = relationship("Session", back_populates="checkpoints")

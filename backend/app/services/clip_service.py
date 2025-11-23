@@ -3,8 +3,7 @@ Clip service - business logic for clips.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +37,7 @@ class ClipService:
 
         # Generate clip ID
         clip_id = (
-            f"clip-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+            f"clip-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
         )
 
         # Compute integrity signature for content if possible
@@ -75,7 +74,7 @@ class ClipService:
         # Auto retention enforcement
         try:
             raw_fk = getattr(clip, "session_id", None)
-            session_fk: Optional[int] = raw_fk if isinstance(raw_fk, int) else None
+            session_fk: int | None = raw_fk if isinstance(raw_fk, int) else None
             if session_fk is not None:
                 await get_retention_manager().auto_prune_if_needed(self.db, session_id=session_fk)
         except Exception:
@@ -83,7 +82,7 @@ class ClipService:
 
         return clip
 
-    async def list_clips(self, session_id: Optional[str] = None, limit: int = 10) -> List[Clip]:
+    async def list_clips(self, session_id: str | None = None, limit: int = 10) -> list[Clip]:
         """List clips."""
         query = select(Clip).order_by(Clip.created_at.desc()).limit(limit)
 
@@ -99,7 +98,7 @@ class ClipService:
         clips_seq = result.scalars().all()
         return list(clips_seq)
 
-    async def get_clip(self, clip_id: str) -> Optional[Clip]:
+    async def get_clip(self, clip_id: str) -> Clip | None:
         """Get a specific clip."""
         result = await self.db.execute(select(Clip).where(Clip.clip_id == clip_id))
         clip = result.scalar_one_or_none()
@@ -119,7 +118,7 @@ class ClipService:
         except Exception:
             pass
 
-    async def prune_clips(self, keep_last: int = 100, older_than_days: Optional[int] = None) -> int:
+    async def prune_clips(self, keep_last: int = 100, older_than_days: int | None = None) -> int:
         """Prune old clips based on retention policy."""
         # Get all clips ordered by creation date
         result = await self.db.execute(select(Clip).order_by(Clip.created_at.desc()))
@@ -134,7 +133,7 @@ class ClipService:
 
         # Also delete clips older than specified days
         if older_than_days:
-            cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+            cutoff_date = datetime.now(UTC) - timedelta(days=older_than_days)
             for clip in all_clips:
                 raw_created = getattr(clip, "created_at", None)
                 created_at_val = raw_created if isinstance(raw_created, datetime) else None

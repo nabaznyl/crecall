@@ -17,7 +17,6 @@ async def export_data(encryption_key: str | None = None, db: AsyncSession = Depe
     return bundle
 
 
-from pydantic import BaseModel
 
 
 class ImportRequest(BaseModel):

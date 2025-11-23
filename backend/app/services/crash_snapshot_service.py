@@ -7,9 +7,8 @@ on demand (manual trigger) or periodically.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,10 +20,10 @@ ISO = "%Y-%m-%dT%H-%M-%S"
 
 class CrashSnapshotService:
     def __init__(self):
-        self._last_snapshot_at: Optional[datetime] = None
+        self._last_snapshot_at: datetime | None = None
 
     async def capture_snapshot(
-        self, db: AsyncSession, reason: str = "manual", session_ids: Optional[list[str]] = None
+        self, db: AsyncSession, reason: str = "manual", session_ids: list[str] | None = None
     ) -> Path:
         """Capture a snapshot and persist to filesystem.
 
@@ -32,7 +31,7 @@ class CrashSnapshotService:
         Returns path to written snapshot file.
         """
         SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        ts = datetime.now(timezone.utc)
+        ts = datetime.now(UTC)
         fname = f"snapshot-{ts.strftime(ISO)}-{reason}.json"
         path = SNAPSHOT_DIR / fname
         exporter = ExportService(db)
@@ -42,11 +41,11 @@ class CrashSnapshotService:
         self._last_snapshot_at = ts
         return path
 
-    async def ensure_periodic(self, db: AsyncSession, interval_minutes: int = 30) -> Optional[Path]:
+    async def ensure_periodic(self, db: AsyncSession, interval_minutes: int = 30) -> Path | None:
         """Capture snapshot if interval since last snapshot exceeded.
         Returns path if new snapshot created else None.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if self._last_snapshot_at is None or (now - self._last_snapshot_at) >= timedelta(
             minutes=interval_minutes
         ):
@@ -55,7 +54,7 @@ class CrashSnapshotService:
 
 
 # Global instance
-_snapshot_service: Optional[CrashSnapshotService] = None
+_snapshot_service: CrashSnapshotService | None = None
 
 
 def get_crash_snapshot_service() -> CrashSnapshotService:

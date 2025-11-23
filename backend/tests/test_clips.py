@@ -2,7 +2,6 @@
 Unit tests for Clips API endpoints
 """
 
-import pytest
 
 
 class TestClipsAPI:

@@ -1,6 +1,6 @@
 """Tests for retention pruning scheduler (sessions & memories)."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.retention_pruning
 async def test_retention_dry_run(db_session: AsyncSession):
     service = MemoryService(db_session)
     # Archived old session (2 days)
-    old_time = datetime.now(timezone.utc) - timedelta(days=2)
+    old_time = datetime.now(UTC) - timedelta(days=2)
     session_old = Session(session_id="old_archived", status="archived", created_at=old_time)
     db_session.add(session_old)
     fr = db_session.flush()
@@ -42,7 +42,7 @@ async def test_retention_dry_run(db_session: AsyncSession):
     result = await db_session.execute(select(Memory).where(Memory.content == "stale"))
     mem_obj = result.scalar_one()
     # Direct attribute assignment for test purposes; ignore type checking
-    mem_obj.created_at = datetime.now(timezone.utc) - timedelta(days=65)  # type: ignore[attr-defined]
+    mem_obj.created_at = datetime.now(UTC) - timedelta(days=65)  # type: ignore[attr-defined]
     await db_session.commit()
 
     scheduler = RetentionScheduler(session_retention_days=1, memory_retention_days=60)
@@ -56,7 +56,7 @@ async def test_retention_dry_run(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_retention_execute(db_session: AsyncSession):
     service = MemoryService(db_session)
-    old_time = datetime.now(timezone.utc) - timedelta(days=31)
+    old_time = datetime.now(UTC) - timedelta(days=31)
     session_old = Session(session_id="old_archived_exec", status="archived", created_at=old_time)
     db_session.add(session_old)
     fr = db_session.flush()
@@ -74,7 +74,7 @@ async def test_retention_execute(db_session: AsyncSession):
     await service.create_memory(MemoryCreate(session_id="active_for_mem", content="stale2", importance=0))  # type: ignore
     result = await db_session.execute(select(Memory).where(Memory.content == "stale2"))
     mem_obj = result.scalar_one()
-    mem_obj.created_at = datetime.now(timezone.utc) - timedelta(days=90)  # type: ignore[attr-defined]
+    mem_obj.created_at = datetime.now(UTC) - timedelta(days=90)  # type: ignore[attr-defined]
     await db_session.commit()
 
     scheduler = RetentionScheduler(session_retention_days=30, memory_retention_days=60)

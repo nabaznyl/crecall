@@ -9,8 +9,8 @@ Rules:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,8 +29,8 @@ class RetentionScheduler:
         self.memory_retention_days = memory_retention_days
         self.importance_threshold = importance_threshold
 
-    async def run(self, db: AsyncSession, dry_run: bool = True) -> Dict[str, Any]:
-        now = datetime.now(timezone.utc)
+    async def run(self, db: AsyncSession, dry_run: bool = True) -> dict[str, Any]:
+        now = datetime.now(UTC)
         session_cutoff = now - timedelta(days=self.session_retention_days)
         memory_cutoff = now - timedelta(days=self.memory_retention_days)
 

@@ -32,7 +32,7 @@ jobs:
         run: |
           black --check app tests
 
-      - name: Run Ruff (lint)
+      - name: Run Ruff (lint with auto-fix)
         working-directory: backend
         run: |
-          ruff check app tests
+          ruff check --fix app tests

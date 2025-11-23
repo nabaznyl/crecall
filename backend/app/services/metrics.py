@@ -8,26 +8,25 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Dict, Tuple
 
 
 class MetricsCollector:
     def __init__(self):
         self._lock = threading.Lock()
-        self._counters: Dict[Tuple[str, Tuple[Tuple[str, str], ...]], int] = {}
-        self._latency: Dict[Tuple[str, Tuple[Tuple[str, str], ...]], list] = {}
+        self._counters: dict[tuple[str, tuple[tuple[str, str], ...]], int] = {}
+        self._latency: dict[tuple[str, tuple[tuple[str, str], ...]], list] = {}
         self._started = time.time()
 
     @staticmethod
-    def _labels_tuple(labels: Dict[str, str]) -> Tuple[Tuple[str, str], ...]:
+    def _labels_tuple(labels: dict[str, str]) -> tuple[tuple[str, str], ...]:
         return tuple(sorted(labels.items()))
 
-    def increment(self, name: str, amount: int = 1, labels: Dict[str, str] | None = None):
+    def increment(self, name: str, amount: int = 1, labels: dict[str, str] | None = None):
         key = (name, self._labels_tuple(labels or {}))
         with self._lock:
             self._counters[key] = self._counters.get(key, 0) + amount
 
-    def observe_latency(self, name: str, value_ms: float, labels: Dict[str, str] | None = None):
+    def observe_latency(self, name: str, value_ms: float, labels: dict[str, str] | None = None):
         key = (name, self._labels_tuple(labels or {}))
         with self._lock:
             bucket = self._latency.setdefault(key, [])
@@ -36,7 +35,7 @@ class MetricsCollector:
             if len(bucket) > 5000:
                 del bucket[:1000]
 
-    def snapshot(self) -> Dict[str, object]:
+    def snapshot(self) -> dict[str, object]:
         with self._lock:
             counters_out = []
             for (name, labels), value in self._counters.items():

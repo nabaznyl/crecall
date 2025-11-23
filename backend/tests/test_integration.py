@@ -2,7 +2,6 @@
 Integration tests for crecall API
 """
 
-import pytest
 
 
 class TestWorkflowIntegration:

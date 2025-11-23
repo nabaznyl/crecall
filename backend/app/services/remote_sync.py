@@ -8,7 +8,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,10 +27,10 @@ class RemoteSync:
     async def push(
         db: AsyncSession,
         host: str,
-        user: Optional[str] = None,
-        path: Optional[str] = None,
-        encryption_key: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        user: str | None = None,
+        path: str | None = None,
+        encryption_key: str | None = None,
+    ) -> dict[str, Any]:
         if path is None:
             path = os.path.join(tempfile.gettempdir(), "crecall_bundle.json")
         bundle = await export_full(db, encryption_key=encryption_key)
@@ -76,11 +76,11 @@ class RemoteSync:
     async def pull(
         db: AsyncSession,
         host: str,
-        user: Optional[str] = None,
-        path: Optional[str] = None,
-        encryption_key: Optional[str] = None,
+        user: str | None = None,
+        path: str | None = None,
+        encryption_key: str | None = None,
         encrypted: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if path is None:
             path = os.path.join(tempfile.gettempdir(), "crecall_bundle.json")
         tmpdir = tempfile.mkdtemp(prefix="crecall_sync_")
@@ -110,7 +110,7 @@ class RemoteSync:
             status = "no_method_available"
 
         if status == "ok":
-            with open(local_file, "r") as f:
+            with open(local_file) as f:
                 payload = f.read()
             result = await import_full(
                 db, payload=payload, encrypted=encrypted, encryption_key=encryption_key

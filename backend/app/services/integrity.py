@@ -7,17 +7,17 @@ import hashlib
 import hmac
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class Integrity:
     @staticmethod
-    def _key() -> Optional[bytes]:
+    def _key() -> bytes | None:
         key = os.getenv("CRECALL_SIGNING_KEY")
         return key.encode() if key else None
 
     @staticmethod
-    def sign_dict(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def sign_dict(payload: dict[str, Any]) -> dict[str, Any] | None:
         key = Integrity._key()
         if not key:
             return None
@@ -27,7 +27,7 @@ class Integrity:
         return {"alg": "HS256", "sig": sig}
 
     @staticmethod
-    def verify_dict(payload: Dict[str, Any]) -> bool:
+    def verify_dict(payload: dict[str, Any]) -> bool:
         key = Integrity._key()
         if not key:
             return True  # No key configured; treat as unverifiable but not failing

@@ -7,8 +7,7 @@ This module runs as a background task and creates clips at regular intervals.
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -27,7 +26,7 @@ class AutoSaveScheduler:
 
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
-        self.last_clip_content: Optional[str] = None
+        self.last_clip_content: str | None = None
         self.is_running = False
 
     async def create_auto_clip(self):
@@ -98,7 +97,7 @@ class AutoSaveScheduler:
         self.is_running = False
         logger.info("Auto-save scheduler stopped")
 
-    def get_next_run_time(self) -> Optional[datetime]:
+    def get_next_run_time(self) -> datetime | None:
         """Get the next scheduled auto-clip time."""
         job = self.scheduler.get_job("auto_clip")
         if job:
@@ -107,7 +106,7 @@ class AutoSaveScheduler:
 
 
 # Global scheduler instance
-_scheduler: Optional[AutoSaveScheduler] = None
+_scheduler: AutoSaveScheduler | None = None
 
 
 def get_scheduler() -> AutoSaveScheduler:

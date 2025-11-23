@@ -30,9 +30,9 @@ except Exception as e:
     logger.warning(f"Centralized config/logging unavailable: {e}")
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Response
+from fastapi import Response
 
 from app.api import clipped as clipped_router
 from app.api import clips, context_router, export_import, memories, sessions
@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
 
     # Create session + initial clip
     session_id = (
-        f"api-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+        f"api-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
     )
     async with AsyncSessionLocal() as db:
         session_service = SessionService(db)

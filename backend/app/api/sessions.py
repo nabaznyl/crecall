@@ -2,7 +2,6 @@
 Sessions API endpoints.
 """
 
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +38,7 @@ async def update_rate_limit(new_limit: int):
     return {"updated_limit": new_limit, "effective_limit": rate_limit_middleware_instance.limit}
 
 
-@router.get("/", response_model=List[SessionResponse])
+@router.get("/", response_model=list[SessionResponse])
 async def list_sessions(limit: int = 50, db: AsyncSession = Depends(get_db)):
     """List all sessions."""
     service = SessionService(db)

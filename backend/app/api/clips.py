@@ -2,7 +2,6 @@
 Clips API endpoints.
 """
 
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,9 +22,9 @@ async def create_clip(clip_data: ClipCreate, db: AsyncSession = Depends(get_db))
     return clip
 
 
-@router.get("/", response_model=List[ClipList])
+@router.get("/", response_model=list[ClipList])
 async def list_clips(
-    session_id: Optional[str] = None, limit: int = 10, db: AsyncSession = Depends(get_db)
+    session_id: str | None = None, limit: int = 10, db: AsyncSession = Depends(get_db)
 ):
     service = ClipService(db)
     clips = await service.list_clips(session_id=session_id, limit=limit)
@@ -52,7 +51,7 @@ async def delete_clip(clip_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/prune")
 async def prune_clips(
-    keep_last: int = 100, older_than_days: Optional[int] = None, db: AsyncSession = Depends(get_db)
+    keep_last: int = 100, older_than_days: int | None = None, db: AsyncSession = Depends(get_db)
 ):
     """Prune old clips based on retention policy."""
     service = ClipService(db)
@@ -61,14 +60,14 @@ async def prune_clips(
 
 
 @router.get("/retention/stats")
-async def retention_stats(session_pk: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+async def retention_stats(session_pk: int | None = None, db: AsyncSession = Depends(get_db)):
     manager = get_retention_manager()
     return await manager.get_retention_stats(db, session_id=session_pk)
 
 
 @router.post("/retention/prune")
 async def retention_prune(
-    session_pk: Optional[int] = None, dry_run: bool = True, db: AsyncSession = Depends(get_db)
+    session_pk: int | None = None, dry_run: bool = True, db: AsyncSession = Depends(get_db)
 ):
     manager = get_retention_manager()
     return await manager.prune_clips(db, session_id=session_pk, dry_run=dry_run)
@@ -83,10 +82,10 @@ async def retention_get_config():
 
 @router.put("/retention/config")
 async def retention_update_config(
-    clip_keep_last: Optional[int] = None,
-    auto_prune_enabled: Optional[bool] = None,
-    preserve_manual_clips: Optional[bool] = None,
-    preserve_important_clips: Optional[bool] = None,
+    clip_keep_last: int | None = None,
+    auto_prune_enabled: bool | None = None,
+    preserve_manual_clips: bool | None = None,
+    preserve_important_clips: bool | None = None,
 ):
     """Update retention configuration settings."""
     manager = get_retention_manager()

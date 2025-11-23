@@ -2,7 +2,7 @@
 Session service - business logic for sessions.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +38,7 @@ class SessionService:
 
         return session
 
-    async def list_sessions(self, limit: int = 50) -> List[SessionModel]:
+    async def list_sessions(self, limit: int = 50) -> list[SessionModel]:
         """List all sessions with caching."""
         cache = get_cache_manager()
         cache_key = f"sessions:list:{limit}"
@@ -57,7 +57,7 @@ class SessionService:
 
         return sessions
 
-    async def get_session(self, session_id: str) -> Optional[SessionModel]:
+    async def get_session(self, session_id: str) -> SessionModel | None:
         """Get a specific session with caching."""
         cache = get_cache_manager()
         cache_key = f"session:{session_id}"
@@ -78,7 +78,7 @@ class SessionService:
 
     async def update_session(
         self, session_id: str, session_data: SessionUpdate
-    ) -> Optional[SessionModel]:
+    ) -> SessionModel | None:
         """Update a session."""
         session = await self.get_session(session_id)
         if not session:
@@ -108,7 +108,7 @@ class SessionService:
             cache.delete(f"session:{session_id}")
             cache.delete("sessions:list:50")
 
-    async def get_session_summary(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session_summary(self, session_id: str) -> dict[str, Any] | None:
         """Get session summary with statistics (cached)."""
         cache = get_cache_manager()
         cache_key = f"session:summary:{session_id}"
@@ -146,7 +146,7 @@ class SessionService:
 
         return summary
 
-    async def freeze_session(self, session_id: str) -> Optional[SessionModel]:
+    async def freeze_session(self, session_id: str) -> SessionModel | None:
         """Freeze session (active → frozen). Prevents new clips except recovery."""
         session = await self.get_session(session_id)
         if not session:
@@ -164,7 +164,7 @@ class SessionService:
         self._invalidate_session_cache(session_id)
         return session
 
-    async def archive_session(self, session_id: str) -> Optional[SessionModel]:
+    async def archive_session(self, session_id: str) -> SessionModel | None:
         """Archive session (frozen → archived). Eligible for retention pruning."""
         session = await self.get_session(session_id)
         if not session:
@@ -182,7 +182,7 @@ class SessionService:
         self._invalidate_session_cache(session_id)
         return session
 
-    async def activate_session(self, session_id: str) -> Optional[SessionModel]:
+    async def activate_session(self, session_id: str) -> SessionModel | None:
         """Reactivate frozen session (frozen → active)."""
         session = await self.get_session(session_id)
         if not session:

@@ -3,7 +3,6 @@ Memories API endpoints.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,12 +22,12 @@ async def create_memory(memory_data: MemoryCreate, db: AsyncSession = Depends(ge
     return memory
 
 
-@router.get("/", response_model=List[MemoryResponse])
+@router.get("/", response_model=list[MemoryResponse])
 async def list_memories(
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     limit: int = Query(20, ge=1, le=100),
-    search: Optional[str] = None,
-    tags: Optional[List[str]] = Query(None),
+    search: str | None = None,
+    tags: list[str] | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     """List memories with optional filtering."""
@@ -43,12 +42,12 @@ async def list_memories(
 async def search_memories(
     query: str = Query("", description="Search text (may be blank for filter-only searches)"),
     limit: int = Query(20, ge=1, le=100),
-    category: Optional[str] = None,
-    min_importance: Optional[int] = Query(None, ge=0, le=2),
-    date_from: Optional[datetime] = None,
-    date_to: Optional[datetime] = None,
-    tags: Optional[List[str]] = Query(None),
-    session_id: Optional[str] = Query(None, description="Scope search to a session"),
+    category: str | None = None,
+    min_importance: int | None = Query(None, ge=0, le=2),
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    tags: list[str] | None = Query(None),
+    session_id: str | None = Query(None, description="Scope search to a session"),
     db: AsyncSession = Depends(get_db),
 ):
     """Ranked memory search.

@@ -8,10 +8,8 @@ endpoint (expected error due to uninitialized limiter).
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.models import Session as SessionModel
 from app.db.session import Base
 from app.main import app
 

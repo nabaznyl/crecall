@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.db.session import Base
 from app.main import app
-from app.middleware.security import RateLimitMiddleware, rate_limit_middleware_instance
 
 ASYNC_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(ASYNC_DB_URL, future=True)

@@ -40,8 +40,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,14 +56,14 @@ class ExportService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def export_sessions(self, session_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def export_sessions(self, session_ids: list[str] | None = None) -> dict[str, Any]:
         stmt = select(Session)
         if session_ids:
             stmt = stmt.where(Session.session_id.in_(session_ids))
         result = await self.db.execute(stmt)
         sessions = result.scalars().all()
 
-        export_sessions: List[Dict[str, Any]] = []
+        export_sessions: list[dict[str, Any]] = []
         for s in sessions:
             # Load related collections explicitly if lazy
             memories = s.memories
@@ -74,12 +74,12 @@ class ExportService:
                     "session_id": s.session_id,
                     "status": s.status,
                     "created_at": (
-                        s.created_at.astimezone(timezone.utc).strftime(ISO)
+                        s.created_at.astimezone(UTC).strftime(ISO)
                         if s.created_at
                         else None
                     ),
                     "updated_at": (
-                        s.updated_at.astimezone(timezone.utc).strftime(ISO)
+                        s.updated_at.astimezone(UTC).strftime(ISO)
                         if s.updated_at
                         else None
                     ),
@@ -90,12 +90,12 @@ class ExportService:
                             "category": m.category,
                             "importance": m.importance,
                             "created_at": (
-                                m.created_at.astimezone(timezone.utc).strftime(ISO)
+                                m.created_at.astimezone(UTC).strftime(ISO)
                                 if m.created_at
                                 else None
                             ),
                             "updated_at": (
-                                m.updated_at.astimezone(timezone.utc).strftime(ISO)
+                                m.updated_at.astimezone(UTC).strftime(ISO)
                                 if m.updated_at
                                 else None
                             ),
@@ -109,7 +109,7 @@ class ExportService:
                             "is_auto": c.is_auto,
                             "name": c.name,
                             "created_at": (
-                                c.created_at.astimezone(timezone.utc).strftime(ISO)
+                                c.created_at.astimezone(UTC).strftime(ISO)
                                 if c.created_at
                                 else None
                             ),
@@ -125,7 +125,7 @@ class ExportService:
                         {
                             "note": cp.note,
                             "created_at": (
-                                cp.created_at.astimezone(timezone.utc).strftime(ISO)
+                                cp.created_at.astimezone(UTC).strftime(ISO)
                                 if cp.created_at
                                 else None
                             ),
@@ -143,12 +143,12 @@ class ExportService:
 
         return {
             "schema_version": SCHEMA_VERSION,
-            "generated_at": datetime.now(timezone.utc).strftime(ISO),
+            "generated_at": datetime.now(UTC).strftime(ISO),
             "sessions": export_sessions,
             "integrity_hash": integrity_hash,
         }
 
-    async def import_data(self, data: Dict[str, Any]) -> List[str]:
+    async def import_data(self, data: dict[str, Any]) -> list[str]:
         # Validate schema
         if data.get("schema_version") != SCHEMA_VERSION:
             raise ValueError("Unsupported schema_version")
@@ -161,7 +161,7 @@ class ExportService:
         if claimed_hash != recalculated:
             raise ValueError("Integrity hash mismatch")
 
-        imported_ids: List[str] = []
+        imported_ids: list[str] = []
         for sess in sessions_payload:
             base_id = sess["session_id"]
             new_id = base_id
@@ -175,7 +175,7 @@ class ExportService:
             self.db.add(s)
             await self._flush_compat()
             # Map clips external id -> internal id
-            clip_id_map: Dict[str, int] = {}
+            clip_id_map: dict[str, int] = {}
             for c in sess.get("clips", []):
                 clip = Clip(
                     clip_id=c["clip_id"],
@@ -229,7 +229,7 @@ class ExportService:
         if hasattr(fr, "__await__"):
             await fr
 
-    def _external_clip_id(self, internal_clip_id: Optional[int]) -> Optional[str]:
+    def _external_clip_id(self, internal_clip_id: int | None) -> str | None:
         if internal_clip_id is None:
             return None
         # Fetch clip external id

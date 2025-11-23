@@ -11,9 +11,9 @@ import os
 import signal
 import sys
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +25,11 @@ class CrashDetector:
     """Detects and handles application crashes."""
 
     def __init__(self):
-        self.session_id: Optional[str] = None
-        self.last_clip_id: Optional[str] = None
+        self.session_id: str | None = None
+        self.last_clip_id: str | None = None
         self.is_clean_shutdown = False
 
-    def register_session(self, session_id: str, clip_id: Optional[str] = None):
+    def register_session(self, session_id: str, clip_id: str | None = None):
         """
         Register the current session for crash monitoring.
 
@@ -45,7 +45,7 @@ class CrashDetector:
             "session_id": session_id,
             "last_clip_id": clip_id,
             "pid": os.getpid(),
-            "started_at": datetime.now(timezone.utc).isoformat(),
+            "started_at": datetime.now(UTC).isoformat(),
             "working_directory": os.getcwd(),
         }
 
@@ -92,7 +92,7 @@ class CrashDetector:
                 CRASH_MARKER_FILE.unlink()
             logger.info("Application exited normally")
 
-    def update_recovery_point(self, clip_id: str, additional_data: Optional[Dict[str, Any]] = None):
+    def update_recovery_point(self, clip_id: str, additional_data: dict[str, Any] | None = None):
         """
         Update the recovery point with latest clip.
 
@@ -105,7 +105,7 @@ class CrashDetector:
         recovery_data = {
             "session_id": self.session_id,
             "last_clip_id": clip_id,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "working_directory": os.getcwd(),
         }
 
@@ -117,7 +117,7 @@ class CrashDetector:
 
         # Also update crash marker
         if CRASH_MARKER_FILE.exists():
-            with open(CRASH_MARKER_FILE, "r") as f:
+            with open(CRASH_MARKER_FILE) as f:
                 marker = json.load(f)
             marker["last_clip_id"] = clip_id
             marker["updated_at"] = recovery_data["updated_at"]
@@ -125,7 +125,7 @@ class CrashDetector:
                 json.dump(marker, f, indent=2)
 
     @staticmethod
-    def check_for_crash() -> Optional[Dict[str, Any]]:
+    def check_for_crash() -> dict[str, Any] | None:
         """
         Check if a crash was detected from previous session.
 
@@ -136,7 +136,7 @@ class CrashDetector:
             return None
 
         try:
-            with open(CRASH_MARKER_FILE, "r") as f:
+            with open(CRASH_MARKER_FILE) as f:
                 crash_data = json.load(f)
 
             # Check if PID still exists (process still running)
@@ -158,13 +158,13 @@ class CrashDetector:
             return None
 
     @staticmethod
-    def get_recovery_state() -> Optional[Dict[str, Any]]:
+    def get_recovery_state() -> dict[str, Any] | None:
         """Get the saved recovery state."""
         if not RECOVERY_STATE_FILE.exists():
             return None
 
         try:
-            with open(RECOVERY_STATE_FILE, "r") as f:
+            with open(RECOVERY_STATE_FILE) as f:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Error reading recovery state: {e}")
@@ -213,7 +213,7 @@ class CrashDetector:
 
 
 # Global detector instance
-_detector: Optional[CrashDetector] = None
+_detector: CrashDetector | None = None
 
 
 def get_crash_detector() -> CrashDetector:
@@ -224,7 +224,7 @@ def get_crash_detector() -> CrashDetector:
     return _detector
 
 
-def register_crash_detection(session_id: str, clip_id: Optional[str] = None):
+def register_crash_detection(session_id: str, clip_id: str | None = None):
     """Register crash detection for current session."""
     detector = get_crash_detector()
     detector.register_session(session_id, clip_id)
@@ -236,7 +236,7 @@ def update_recovery_point(clip_id: str, **kwargs):
     detector.update_recovery_point(clip_id, kwargs)
 
 
-def check_and_recover() -> Optional[Dict[str, Any]]:
+def check_and_recover() -> dict[str, Any] | None:
     """Check for crash and optionally prompt for recovery."""
     crash_data = CrashDetector.check_for_crash()
     if crash_data:

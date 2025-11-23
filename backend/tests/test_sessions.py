@@ -2,7 +2,6 @@
 Unit tests for Session API endpoints
 """
 
-import pytest
 
 
 class TestSessionAPI:

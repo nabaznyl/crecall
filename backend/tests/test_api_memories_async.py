@@ -4,8 +4,7 @@ Covers create, list with filters, get/update/delete, advanced search,
 categories, popular tags, importance and date filtering.
 """
 
-import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -14,7 +13,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Memory
-from app.db.models import Session as SessionModel
 from app.db.session import Base
 from app.main import app
 
@@ -176,7 +174,7 @@ async def test_popular_tags_endpoint(async_client):
 
 @pytest.mark.asyncio
 async def test_importance_and_date_filters(async_client):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     m_old = await create_memory(async_client, "sess-D", content="Old", importance=0)
     # Simulate older timestamp by direct DB update
     async with async_sessionmaker(

@@ -2,7 +2,7 @@
 
 import time
 import uuid
-from typing import Awaitable, Callable, Optional
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -102,5 +102,5 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 
 # Global mutable reference for admin updates
-rate_limit_middleware_instance: Optional[RateLimitMiddleware] = None
+rate_limit_middleware_instance: RateLimitMiddleware | None = None
 rate_limit_counters = {}

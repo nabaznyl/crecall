@@ -6,7 +6,6 @@ Uses sync TestClient for API tests, async for service layer.
 import pytest
 
 pytestmark = pytest.mark.session_lifecycle
-from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.session_service import SessionService

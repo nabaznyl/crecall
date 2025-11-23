@@ -4,7 +4,6 @@ import pytest
 
 pytestmark = pytest.mark.memory_search
 
-from datetime import datetime, timedelta
 
 
 @pytest.mark.asyncio

@@ -3,12 +3,10 @@
 Provides forward-compatible naming without breaking existing clients.
 """
 
-from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Clip
 from app.db.session import get_db
 from app.schemas.clip import ClipCreate
 from app.services.clip_service import ClipService

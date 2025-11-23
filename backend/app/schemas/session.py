@@ -3,7 +3,6 @@ Pydantic schemas for sessions.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +22,7 @@ class SessionCreate(SessionBase):
 class SessionUpdate(BaseModel):
     """Schema for updating a session."""
 
-    status: Optional[str] = None
+    status: str | None = None
 
 
 class SessionResponse(SessionBase):

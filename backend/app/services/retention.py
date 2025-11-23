@@ -7,8 +7,7 @@ Manages clip pruning based on configuration settings.
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +35,7 @@ class ClipRetentionManager:
         """Load configuration from file"""
         if os.path.exists(self.config_path):
             try:
-                with open(self.config_path, "r") as f:
+                with open(self.config_path) as f:
                     return json.load(f)
             except Exception as e:
                 logging.getLogger(__name__).warning(f"Config load error: {e}")
@@ -117,8 +116,8 @@ class ClipRetentionManager:
         created_at_val = getattr(clip, "created_at", None)
         if isinstance(created_at_val, datetime):
             if created_at_val.tzinfo is None:
-                created_at_val = created_at_val.replace(tzinfo=timezone.utc)
-            if (datetime.now(timezone.utc) - created_at_val) < timedelta(hours=1):
+                created_at_val = created_at_val.replace(tzinfo=UTC)
+            if (datetime.now(UTC) - created_at_val) < timedelta(hours=1):
                 return True
 
         # Preserve clips with important metadata
@@ -129,7 +128,7 @@ class ClipRetentionManager:
 
         return False
 
-    async def count_clips(self, db: AsyncSession, session_id: Optional[int] = None) -> dict:
+    async def count_clips(self, db: AsyncSession, session_id: int | None = None) -> dict:
         """
         Count clips by type.
 
@@ -162,8 +161,8 @@ class ClipRetentionManager:
         }
 
     async def identify_clips_to_prune(
-        self, db: AsyncSession, session_id: Optional[int] = None, dry_run: bool = True
-    ) -> List[Clip]:
+        self, db: AsyncSession, session_id: int | None = None, dry_run: bool = True
+    ) -> list[Clip]:
         """
         Identify clips that should be pruned based on retention policy.
 
@@ -218,8 +217,8 @@ class ClipRetentionManager:
             created_at_val = clip.get("created_at")
             if not preserve and isinstance(created_at_val, datetime):
                 if created_at_val.tzinfo is None:
-                    created_at_val = created_at_val.replace(tzinfo=timezone.utc)
-                if (datetime.now(timezone.utc) - created_at_val) < timedelta(hours=1):
+                    created_at_val = created_at_val.replace(tzinfo=UTC)
+                if (datetime.now(UTC) - created_at_val) < timedelta(hours=1):
                     preserve = True
                 preserve = True
             content_val = clip.get("content")
@@ -247,7 +246,7 @@ class ClipRetentionManager:
         return clips_to_prune
 
     async def prune_clips(
-        self, db: AsyncSession, session_id: Optional[int] = None, dry_run: bool = True
+        self, db: AsyncSession, session_id: int | None = None, dry_run: bool = True
     ) -> dict:
         """
         Execute clip pruning based on retention policy.
@@ -282,7 +281,7 @@ class ClipRetentionManager:
 
         return stats
 
-    async def auto_prune_if_needed(self, db: AsyncSession, session_id: Optional[int] = None):
+    async def auto_prune_if_needed(self, db: AsyncSession, session_id: int | None = None):
         """
         Automatically prune if clip count exceeds retention limit.
 
@@ -304,7 +303,7 @@ class ClipRetentionManager:
             metrics.increment("retention.prune.events", 1)
             logging.getLogger(__name__).info(f"Pruned {pruned} clips")
 
-    async def get_retention_stats(self, db: AsyncSession, session_id: Optional[int] = None) -> dict:
+    async def get_retention_stats(self, db: AsyncSession, session_id: int | None = None) -> dict:
         """
         Get detailed retention statistics.
 

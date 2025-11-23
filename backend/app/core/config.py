@@ -2,7 +2,6 @@
 Application configuration settings.
 """
 
-from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,7 +17,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///crecall.db"  # Default to SQLite

@@ -3,7 +3,7 @@ Pydantic schemas for clips.
 """
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -11,12 +11,12 @@ from pydantic import BaseModel, Field
 class ClipBase(BaseModel):
     """Base clip schema."""
 
-    name: Optional[str] = None
+    name: str | None = None
     is_auto: bool = True
-    content: Dict[str, Any] = Field(default_factory=dict)
-    working_directory: Optional[str] = None
-    git_branch: Optional[str] = None
-    git_commit: Optional[str] = None
+    content: dict[str, Any] = Field(default_factory=dict)
+    working_directory: str | None = None
+    git_branch: str | None = None
+    git_commit: str | None = None
     git_dirty: bool = False
 
 
@@ -24,7 +24,7 @@ class ClipCreate(ClipBase):
     """Schema for creating a clip."""
 
     session_id: str  # External session identifier (not internal PK)
-    profile: Optional[str] = "standard"  # For clip engine: minimal, standard, complete
+    profile: str | None = "standard"  # For clip engine: minimal, standard, complete
 
 
 class ClipResponse(ClipBase):
@@ -43,7 +43,7 @@ class ClipList(BaseModel):
 
     id: int
     clip_id: str
-    name: Optional[str]
+    name: str | None
     is_auto: bool
     created_at: datetime
 

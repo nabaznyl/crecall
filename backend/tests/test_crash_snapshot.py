@@ -1,13 +1,12 @@
 """Tests for crash snapshot capture and periodic scheduling."""
 
 import json
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from app.schemas.memory import MemoryCreate
-from app.services.crash_snapshot_service import SNAPSHOT_DIR, get_crash_snapshot_service
+from app.services.crash_snapshot_service import get_crash_snapshot_service
 from app.services.memory_service import MemoryService
 
 pytestmark = pytest.mark.crash_snapshot
@@ -42,6 +41,6 @@ async def test_crash_snapshot_periodic(db_session):
     )  # should not create
     assert second is None
     # Simulate time passage
-    snap_service._last_snapshot_at = datetime.now(timezone.utc) - timedelta(minutes=121)  # type: ignore
+    snap_service._last_snapshot_at = datetime.now(UTC) - timedelta(minutes=121)  # type: ignore
     third = await snap_service.ensure_periodic(db_session, interval_minutes=120)
     assert third is not None and third.exists()

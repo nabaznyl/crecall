@@ -6,7 +6,7 @@ branches, conflicting heads, or potentially rogue activity.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +17,7 @@ from app.db.models import Session as SessionModel
 
 class BranchSafety:
     @staticmethod
-    async def analyze(db: AsyncSession, session_identifier: str) -> Dict[str, Any]:
+    async def analyze(db: AsyncSession, session_identifier: str) -> dict[str, Any]:
         # Resolve session
         session_row = (
             await db.execute(
@@ -35,9 +35,9 @@ class BranchSafety:
             .limit(200)
         )
         clips_seq = result.scalars().all()
-        clips: List[Clip] = list(clips_seq)
+        clips: list[Clip] = list(clips_seq)
 
-        branch_groups: Dict[str, List[Clip]] = {}
+        branch_groups: dict[str, list[Clip]] = {}
         for c in clips:
             branch_val = getattr(c, "git_branch", None)
             branch = branch_val if isinstance(branch_val, str) and branch_val else "unknown"
@@ -56,13 +56,13 @@ class BranchSafety:
             }
 
         divergence = len([b for b in branch_groups.keys() if b != "unknown"]) > 1
-        rogue_candidates: List[str] = []
+        rogue_candidates: list[str] = []
         for b, info in heads.items():
             if info["dirty"] or (b == "unknown"):
                 rogue_candidates.append(b)
 
         # Conflicts if different branches share identical git_commit hash (likely detached head or resets)
-        commit_to_branches: Dict[str, List[str]] = {}
+        commit_to_branches: dict[str, list[str]] = {}
         for b, info in heads.items():
             commit = info.get("git_commit") or ""
             if commit:
@@ -83,8 +83,8 @@ class BranchSafety:
         }
 
     @staticmethod
-    def _suggest(divergence: bool, rogues: List[str], conflicts: Dict[str, List[str]]) -> List[str]:
-        s: List[str] = []
+    def _suggest(divergence: bool, rogues: list[str], conflicts: dict[str, list[str]]) -> list[str]:
+        s: list[str] = []
         if divergence:
             s.append("Multiple active branches detected; consider merging or isolating workspaces.")
         if rogues:

@@ -9,7 +9,7 @@ back to plain JSON if encryption libs unavailable.
 import base64
 import json
 import zlib
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +25,7 @@ except Exception:
     JWE_AVAILABLE = False
 
 
-async def export_full(db: AsyncSession, encryption_key: Optional[str] = None) -> Dict[str, Any]:
+async def export_full(db: AsyncSession, encryption_key: str | None = None) -> dict[str, Any]:
     sessions_result = await db.execute(select(SessionModel))
     sessions = sessions_result.scalars().all()
 
@@ -93,8 +93,8 @@ async def export_full(db: AsyncSession, encryption_key: Optional[str] = None) ->
 
 
 async def import_full(
-    db: AsyncSession, payload: str, encrypted: bool, encryption_key: Optional[str] = None
-) -> Dict[str, Any]:
+    db: AsyncSession, payload: str, encrypted: bool, encryption_key: str | None = None
+) -> dict[str, Any]:
     if encrypted and JWE_AVAILABLE and encryption_key:
         decompressed = jwe.decrypt(payload, encryption_key)
     else:

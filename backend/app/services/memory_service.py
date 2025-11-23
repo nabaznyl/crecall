@@ -3,10 +3,10 @@ Memory service - business logic for memories.
 """
 
 import inspect
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Clip, Memory
@@ -72,11 +72,11 @@ class MemoryService:
 
     async def list_memories(
         self,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
         limit: int = 20,
-        search_query: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-    ) -> List[Memory]:
+        search_query: str | None = None,
+        tags: list[str] | None = None,
+    ) -> list[Memory]:
         """List memories with optional filtering."""
         query = select(Memory).order_by(Memory.created_at.desc()).limit(limit)
 
@@ -97,12 +97,12 @@ class MemoryService:
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def get_memory(self, memory_id: int) -> Optional[Memory]:
+    async def get_memory(self, memory_id: int) -> Memory | None:
         """Get a specific memory."""
         result = await self.db.execute(select(Memory).where(Memory.id == memory_id))
         return result.scalar_one_or_none()
 
-    async def update_memory(self, memory_id: int, memory_data: MemoryUpdate) -> Optional[Memory]:
+    async def update_memory(self, memory_id: int, memory_data: MemoryUpdate) -> Memory | None:
         """Update a memory."""
         memory = await self.get_memory(memory_id)
         if not memory:
@@ -139,13 +139,13 @@ class MemoryService:
         self,
         query: str,
         limit: int = 20,
-        category: Optional[str] = None,
-        min_importance: Optional[int] = None,
-        date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None,
-        tags: Optional[List[str]] = None,
-        session_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        category: str | None = None,
+        min_importance: int | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        tags: list[str] | None = None,
+        session_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Search memories with lightweight relevance ranking.
 
         Relevance score components:
@@ -188,7 +188,7 @@ class MemoryService:
         memories = result.scalars().all()
 
         now = datetime.utcnow()
-        ranked: List[Dict[str, Any]] = []
+        ranked: list[dict[str, Any]] = []
         for m in memories:
             # Post-filter by tags (any match) since DB JSON LIKE differs across engines
             if tags and m.tags:
@@ -217,14 +217,14 @@ class MemoryService:
         ranked.sort(key=lambda x: x["score"], reverse=True)
         return ranked[:limit]
 
-    async def get_categories(self) -> List[str]:
+    async def get_categories(self) -> list[str]:
         """Get list of unique categories."""
         result = await self.db.execute(
             select(Memory.category).distinct().where(Memory.category.isnot(None))
         )
         return [cat for cat in result.scalars().all() if cat]
 
-    async def get_popular_tags(self, limit: int = 20) -> List[dict]:
+    async def get_popular_tags(self, limit: int = 20) -> list[dict]:
         """Get most frequently used tags."""
         # This is a simplified version for SQLite
         # For production, use proper JSON aggregation

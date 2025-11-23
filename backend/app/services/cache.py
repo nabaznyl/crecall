@@ -9,11 +9,10 @@ Provides caching for:
 """
 
 import hashlib
-import json
 import os
 import pickle
 from functools import wraps
-from typing import Any, List, Optional
+from typing import Any
 
 try:
     import redis  # type: ignore[import-not-found]
@@ -59,7 +58,7 @@ class CacheManager:
             print("  Falling back to in-memory cache")
             self.redis_client = None
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """
         Get value from cache.
 
@@ -135,7 +134,7 @@ class CacheManager:
         key = f"query:{query_hash}"
         self.set(key, result, ttl)
 
-    def get_cached_query(self, query_hash: str) -> Optional[Any]:
+    def get_cached_query(self, query_hash: str) -> Any | None:
         """Get cached query result"""
         key = f"query:{query_hash}"
         return self.get(key)
@@ -146,7 +145,7 @@ class CacheManager:
         key = f"embedding:{text_hash}"
         self.set(key, embedding, ttl)
 
-    def get_cached_embedding(self, text: str) -> Optional[Any]:
+    def get_cached_embedding(self, text: str) -> Any | None:
         """Get cached embedding"""
         text_hash = hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()
         key = f"embedding:{text_hash}"
@@ -157,7 +156,7 @@ class CacheManager:
         key = f"session:{session_id}"
         self.set(key, session_data, ttl)
 
-    def get_cached_session(self, session_id: int) -> Optional[dict]:
+    def get_cached_session(self, session_id: int) -> dict | None:
         """Get cached session data"""
         key = f"session:{session_id}"
         return self.get(key)
@@ -247,7 +246,7 @@ class QueryCache:
         key_str = ":".join(str(arg) for arg in args)
         return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get from cache"""
         return self.cache.get_cached_query(key)
 
@@ -255,7 +254,7 @@ class QueryCache:
         """Set in cache"""
         self.cache.cache_query_result(key, value, ttl)
 
-    def invalidate(self, pattern: Optional[str] = None):
+    def invalidate(self, pattern: str | None = None):
         """Invalidate cache entries matching pattern"""
         if pattern:
             # For Redis with pattern support

@@ -2,7 +2,6 @@
 Unit tests for Memories API endpoints (legacy sync - updated to match current API contract)
 """
 
-import pytest
 
 
 class TestMemoriesAPI:

@@ -8,20 +8,20 @@ that capture the complete development context with minimal storage footprint.
 import json
 import os
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class ClipEngine:
     """Engine for creating and managing context clips."""
 
-    def __init__(self, working_dir: Optional[str] = None):
+    def __init__(self, working_dir: str | None = None):
         self.working_dir = working_dir or os.getcwd()
 
     def create_clip(
-        self, name: Optional[str] = None, is_auto: bool = True, profile: str = "standard"
-    ) -> Dict[str, Any]:
+        self, name: str | None = None, is_auto: bool = True, profile: str = "standard"
+    ) -> dict[str, Any]:
         """
         Create a clip capturing current development context.
 
@@ -34,7 +34,7 @@ class ClipEngine:
             Dict containing clip data
         """
         clip = {
-            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "name": name,
             "is_auto": is_auto,
             "profile": profile,
@@ -55,7 +55,7 @@ class ClipEngine:
 
         return clip
 
-    def _capture_git_state(self) -> Dict[str, Any]:
+    def _capture_git_state(self) -> dict[str, Any]:
         """Capture Git repository state."""
         git_state = {
             "branch": None,
@@ -124,7 +124,7 @@ class ClipEngine:
 
         return git_state
 
-    def _capture_open_files(self) -> List[Dict[str, Any]]:
+    def _capture_open_files(self) -> list[dict[str, Any]]:
         """
         Capture list of open files.
 
@@ -136,7 +136,7 @@ class ClipEngine:
         # TODO: Implement via VS Code extension or IDE API
         return []
 
-    def _capture_terminal_history(self, limit: int = 20) -> Dict[str, Any]:
+    def _capture_terminal_history(self, limit: int = 20) -> dict[str, Any]:
         """
         Capture terminal command history.
 
@@ -152,7 +152,7 @@ class ClipEngine:
             # Try to read bash history
             history_file = Path.home() / ".bash_history"
             if history_file.exists():
-                with open(history_file, "r", errors="ignore") as f:
+                with open(history_file, errors="ignore") as f:
                     lines = f.readlines()
                     # Get last N lines
                     history["commands"] = [line.strip() for line in lines[-limit:] if line.strip()]
@@ -162,7 +162,7 @@ class ClipEngine:
 
         return history
 
-    def _capture_environment(self) -> Dict[str, str]:
+    def _capture_environment(self) -> dict[str, str]:
         """
         Capture relevant environment variables.
 
@@ -196,7 +196,7 @@ class ClipEngine:
 
         return env
 
-    def _capture_docker_context(self) -> Dict[str, Any]:
+    def _capture_docker_context(self) -> dict[str, Any]:
         """Capture Docker context and running containers."""
         docker_state = {
             "context": "default",
@@ -232,19 +232,19 @@ class ClipEngine:
 
         return docker_state
 
-    def estimate_clip_size(self, clip: Dict[str, Any]) -> int:
+    def estimate_clip_size(self, clip: dict[str, Any]) -> int:
         """Estimate clip size in bytes."""
         return len(json.dumps(clip, indent=2).encode("utf-8"))
 
-    def validate_clip(self, clip: Dict[str, Any]) -> bool:
+    def validate_clip(self, clip: dict[str, Any]) -> bool:
         """Validate clip structure."""
         required_fields = ["timestamp", "working_directory", "git"]
         return all(field in clip for field in required_fields)
 
 
 def create_clip_from_context(
-    working_dir: Optional[str] = None, name: Optional[str] = None, profile: str = "standard"
-) -> Dict[str, Any]:
+    working_dir: str | None = None, name: str | None = None, profile: str = "standard"
+) -> dict[str, Any]:
     """
     Convenience function to create a clip from current context.
 
