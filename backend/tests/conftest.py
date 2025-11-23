@@ -75,6 +75,9 @@ def client(db_session):
 
     os.environ["CRECALL_TEST_MODE"] = "1"
 
+    # Ensure signing key present for integrity tests
+    os.environ.setdefault("CRECALL_SIGNING_KEY", "test-signing-key")
+
     def override_get_db():
         try:
             yield db_session

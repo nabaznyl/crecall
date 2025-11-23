@@ -102,9 +102,9 @@ class ClipService:
         clip = result.scalar_one_or_none()
         if clip and isinstance(clip.content, dict):
             integrity_state = Integrity.status_dict(clip.content)
-            if integrity_state == "invalid":
-                # Optionally flag; here we attach marker in content for caller awareness
-                clip.content["integrity_status"] = "invalid"
+            if integrity_state != "missing":
+                # Attach integrity status (valid or invalid) for caller awareness
+                clip.content["integrity_status"] = integrity_state
         return clip
 
     async def delete_clip(self, clip_id: str) -> None:

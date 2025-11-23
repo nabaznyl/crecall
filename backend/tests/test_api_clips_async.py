@@ -43,6 +43,9 @@ async def async_client(db_session):
             pass
 
     from app.db.session import get_db
+    # Ensure signing key available for integrity verification logic
+    import os
+    os.environ.setdefault("CRECALL_SIGNING_KEY", "test-signing-key")
 
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
@@ -226,7 +229,6 @@ async def test_restore_plan(async_client):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Integrity verification not yet implemented in clips service")
 async def test_integrity_flag(async_client):
     """Force invalid integrity by manually altering stored content signature."""
     sid_str, _ = await create_session_helper(async_client, sid="integrity-flow")
