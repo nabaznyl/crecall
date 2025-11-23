@@ -5,7 +5,6 @@ import pytest
 pytestmark = pytest.mark.memory_search
 
 
-
 @pytest.mark.asyncio
 async def test_ranked_search_basic(db_session):
     from app.schemas.memory import MemoryCreate

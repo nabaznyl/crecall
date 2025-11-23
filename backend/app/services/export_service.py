@@ -74,14 +74,10 @@ class ExportService:
                     "session_id": s.session_id,
                     "status": s.status,
                     "created_at": (
-                        s.created_at.astimezone(UTC).strftime(ISO)
-                        if s.created_at
-                        else None
+                        s.created_at.astimezone(UTC).strftime(ISO) if s.created_at else None
                     ),
                     "updated_at": (
-                        s.updated_at.astimezone(UTC).strftime(ISO)
-                        if s.updated_at
-                        else None
+                        s.updated_at.astimezone(UTC).strftime(ISO) if s.updated_at else None
                     ),
                     "memories": [
                         {
@@ -90,14 +86,10 @@ class ExportService:
                             "category": m.category,
                             "importance": m.importance,
                             "created_at": (
-                                m.created_at.astimezone(UTC).strftime(ISO)
-                                if m.created_at
-                                else None
+                                m.created_at.astimezone(UTC).strftime(ISO) if m.created_at else None
                             ),
                             "updated_at": (
-                                m.updated_at.astimezone(UTC).strftime(ISO)
-                                if m.updated_at
-                                else None
+                                m.updated_at.astimezone(UTC).strftime(ISO) if m.updated_at else None
                             ),
                             "linked_clip_id": self._external_clip_id(m.linked_clip_id),
                         }
@@ -109,9 +101,7 @@ class ExportService:
                             "is_auto": c.is_auto,
                             "name": c.name,
                             "created_at": (
-                                c.created_at.astimezone(UTC).strftime(ISO)
-                                if c.created_at
-                                else None
+                                c.created_at.astimezone(UTC).strftime(ISO) if c.created_at else None
                             ),
                             "working_directory": c.working_directory,
                             "git_branch": c.git_branch,

@@ -75,9 +75,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Schema initialization failed: {e}")
 
     # Create session + initial clip
-    session_id = (
-        f"api-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
-    )
+    session_id = f"api-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
     async with AsyncSessionLocal() as db:
         session_service = SessionService(db)
         session = await session_service.create_session(

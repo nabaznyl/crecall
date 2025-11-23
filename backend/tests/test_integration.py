@@ -3,7 +3,6 @@ Integration tests for crecall API
 """
 
 
-
 class TestWorkflowIntegration:
     """Test complete workflows"""
 

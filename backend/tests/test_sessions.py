@@ -3,7 +3,6 @@ Unit tests for Session API endpoints
 """
 
 
-
 class TestSessionAPI:
     """Test session endpoints"""
 

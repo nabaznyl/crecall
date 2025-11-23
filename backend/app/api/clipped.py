@@ -3,7 +3,6 @@
 Provides forward-compatible naming without breaking existing clients.
 """
 
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 

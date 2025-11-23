@@ -36,9 +36,7 @@ class ClipService:
             await self.db.flush()
 
         # Generate clip ID
-        clip_id = (
-            f"clip-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
-        )
+        clip_id = f"clip-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
 
         # Compute integrity signature for content if possible
         content_payload = clip_data.content

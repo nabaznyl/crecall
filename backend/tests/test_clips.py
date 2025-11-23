@@ -3,7 +3,6 @@ Unit tests for Clips API endpoints
 """
 
 
-
 class TestClipsAPI:
     """Test clips endpoints"""
 
