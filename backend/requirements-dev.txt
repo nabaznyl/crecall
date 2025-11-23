@@ -1,0 +1,4 @@
+# Development-only requirements
+mutmut>=2.2
+pytest
+pytest-cov

@@ -54,6 +54,7 @@ dist-nightly/
 # Database
 *.db
 *.sqlite
+.mutmut-cache/
 *.sqlite3
 postgresql/data/
 
