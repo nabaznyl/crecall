@@ -2,30 +2,18 @@ name: Benchmarks (nightly)
 
 on:
   schedule:
-    - cron: '0 3 * * *' # daily at 03:00 UTC
-  workflow_dispatch:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
 
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install dependencies
-        working-directory: backend
+      - name: Run benchmark helper
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest-benchmark
-      - name: Run pytest-benchmark
-        working-directory: backend
-        run: |
-          mkdir -p benchmarks
-          TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
-          pytest tests/benchmarks --benchmark-only --benchmark-json=benchmarks/results-${TIMESTAMP}.json
+          chmod +x ./scripts/run_benchmarks.sh
+          ./scripts/run_benchmarks.sh --threshold 0.05
       - name: Check benchmark regressions
         working-directory: backend
         env:

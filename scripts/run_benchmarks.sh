@@ -5,13 +5,30 @@ set -euo pipefail
 # Usage: ./scripts/run_benchmarks.sh [--threshold 0.05]
 
 THRESHOLD=0.05
-if [[ ${1-} == "--threshold" && -n ${2-} ]]; then
-  THRESHOLD=$2
-fi
+WITH_OTEL=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --threshold)
+      THRESHOLD=$2
+      shift 2
+      ;;
+    --with-otel)
+      WITH_OTEL=1
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 echo "Installing backend requirements..."
 python3 -m pip install --upgrade pip
 python3 -m pip install -r backend/requirements.txt
+if [ "$WITH_OTEL" -eq 1 ]; then
+  echo "Installing optional OpenTelemetry instrumentation..."
+  python3 -m pip install -r backend/requirements-otel.txt || true
+fi
 
 echo "Installing backend package in editable mode..."
 python3 -m pip install -e backend

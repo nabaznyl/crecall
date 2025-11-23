@@ -1,0 +1,4 @@
+# Optional OpenTelemetry instrumentation for runtime tracing
+# Install when you want automatic FastAPI/ASGI instrumentation and exporters.
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-asgi
