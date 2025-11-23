@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   build-and-release:
@@ -58,6 +59,21 @@ jobs:
         working-directory: frontend
         run: |
           npx cyclonedx-npm --output-file frontend-cyclonedx-sbom.json --include-dev
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.2.3'
+
+      - name: Sign release artifacts (keyless)
+        run: |
+          set -euo pipefail
+          for f in backend/dist/*.whl backend/dist/*.tar.gz backend/backend-cyclonedx-sbom.json frontend/frontend-cyclonedx-sbom.json; do
+            echo "Signing $f"
+            cosign sign-blob --yes "$f" --output-signature "$f.sig" --output-certificate "$f.cert"
+          done
+          ls -1 backend/dist/*.sig || true
+          ls -1 backend/dist/*.cert || true
 
       - name: Compute next tag (v.0.1.x.y) and changelog
         id: version
@@ -122,3 +138,9 @@ jobs:
             backend/dist/*.tar.gz
             backend/backend-cyclonedx-sbom.json
             frontend/frontend-cyclonedx-sbom.json
+            backend/dist/*.sig
+            backend/dist/*.cert
+            backend/backend-cyclonedx-sbom.json.sig
+            backend/backend-cyclonedx-sbom.json.cert
+            frontend/frontend-cyclonedx-sbom.json.sig
+            frontend/frontend-cyclonedx-sbom.json.cert

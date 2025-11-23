@@ -1,5 +1,9 @@
 name: CI
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
     branches: [ main ]
@@ -190,4 +194,28 @@ jobs:
         with:
           name: container-security
           path: trivy-image-sbom.json
+      - name: Log in to GHCR (stable branch only)
+        if: github.ref == 'refs/heads/stable'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Tag & Push image to GHCR (stable branch only)
+        if: github.ref == 'refs/heads/stable'
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/crecall
+          TAG=${{ github.sha }}
+          docker tag crecall:ci $IMAGE:$TAG
+          docker push $IMAGE:$TAG
+          echo "pushed_image=$IMAGE:$TAG" >> $GITHUB_OUTPUT
+      - name: Install cosign
+        if: github.ref == 'refs/heads/stable'
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.2.3'
+      - name: Sign container image with cosign (keyless)
+        if: github.ref == 'refs/heads/stable'
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/crecall:${{ github.sha }}
+          cosign sign --yes $IMAGE
+          cosign verify $IMAGE
         

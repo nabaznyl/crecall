@@ -5,17 +5,18 @@
 - Passphrase stored with restricted permissions.
 - Git hook memory creation (non-sensitive).
 
-## Immediate Enhancements (Planned)
-1. Integrity Hashing: SHA-256 for release artifacts; publish `CHECKSUMS.txt`.
-2. Signed Tags: GPG sign version tags (e.g., `v0.1.0d-2`).
-3. Sensitive Pattern Scan: Pre-commit hook scanning (tokens, secrets, keys).
-4. Dependency Audit: Weekly SCA (pip + npm) severity report.
-5. Secure Config: Enforce `.env` file permission (600) and deny accidental commits.
-6. Clip Sanitization: Strip env vars matching high-risk keys (AWS, DB, cloud tokens).
-7. Memory Redaction API: Redact or delete sensitive memory entries by pattern.
-8. Rate Limiting: Basic per-IP limits on future public API endpoints.
-9. Transport Security: Enforce HTTPS (reverse proxy) for API when externalized.
-10. User Preference Security: Theme & personalization isolated from sensitive operational state.
+## Immediate Enhancements (Current / Planned)
+1. Artifact Signing: Keyless Sigstore cosign signing for container images & release artifacts (wheel, sdist, SBOMs).
+2. Integrity Hashing: SHA-256 checksums (future addition alongside signatures).
+3. Signed Tags: GPG or keyless attestations for version tags (future).
+4. Sensitive Pattern Scan: Pre-commit + CI secret scanning (gitleaks active).
+5. Dependency Audit: Continuous SCA (pip-audit strict + safety report) in CI.
+6. Secure Config: Enforce `.env` permissions (600) and exclude from VCS.
+7. Clip Sanitization: Strip env vars matching high-risk keys (AWS, DB, cloud tokens).
+8. Memory Redaction API: Redact or delete sensitive memory entries by pattern.
+9. Rate Limiting: Basic per-IP limits on future public API endpoints.
+10. Transport Security: Enforce HTTPS (reverse proxy) for API when externalized.
+11. User Preference Security: Theme & personalization isolated from sensitive operational state.
 
 ## Future Roadmap
 - Field-Level Encryption: Encrypt sensitive memory segments individually.
@@ -36,6 +37,7 @@
 - `trufflehog` / `gitleaks` for secret scanning.
 - `pip-audit` / `npm audit` for dependency vulnerabilities.
 - `bandit` for Python static security checks.
+- `cosign` for signing container images & release artifacts (keyless via GitHub OIDC).
 
 ## Pre-Commit Example (Concept)
 ```bash
@@ -63,4 +65,21 @@ exit 0
 5. Publish post-incident summary memory tagged `security-incident`.
 
 ---
-Lean baseline; expand iteratively without bloat.
+Lean baseline; expand iteratively without bloat. Artifact signing provides provenance & tamper detection for distributed artifacts.
+
+### Verification Examples
+
+Container image (stable branch build):
+```bash
+cosign verify ghcr.io/nabaznyl/crecall:<git-sha>
+```
+
+Release artifact (wheel):
+```bash
+cosign verify-blob \
+  --certificate backend/dist/<artifact>.whl.cert \
+  --signature backend/dist/<artifact>.whl.sig \
+  backend/dist/<artifact>.whl
+```
+
+Expected output includes `Verified OK` and issuer `https://token.actions.githubusercontent.com`.
