@@ -6,7 +6,7 @@
 ---
 
 ## Getting Started
-- [**README**](README.md) - Overview, quick navigation, key concepts
+- [**Quick Start**](quick-start.md) - Get crecall running in 5 minutes
 - [**Installation**](installation.md) - Setup instructions (source, Docker, PostgreSQL)
 - [**Configuration**](CONFIGURATION.md) - Environment variables, settings reference
 
@@ -20,15 +20,14 @@
 - [**Version History**](changelog.md) - Complete chronological changelog
 
 ## Architecture & Planning
-- [**Vision**](../VISION.md) - Product intent, personas, metrics, roadmap phases
-- [**Context Snapshot**](../CONTEXT_SNAPSHOT.md) - Architecture, gaps, decisions log
-- [**Roadmap**](../ROADMAP.md) - Milestones, feature flags, KPIs
-- [**Build Standards**](../BUILD_STANDARDS.md) - CI/CD, channels, release automation
+- [**Vision**](VISION.md) - Product intent, personas, metrics, roadmap phases
+- [**Roadmap**](ROADMAP.md) - Milestones, feature flags, KPIs
+- [**Build Standards**](BUILD_STANDARDS.md) - CI/CD, channels, release automation
+- [**Architecture**](architecture.md) - System design and technical overview
 
 ## Specialized Topics
-- [**Security Protocols**](../SECURITY_PROTOCOLS.md) - Hardening roadmap
-- [**Brand License**](../BRAND_LICENSE_AGREEMENT.md) - Protective licensing
-- [**Phase 0-1 Summary**](../PHASE_0_1_SUMMARY.md) - Alignment & structure completion
+- [**Security Protocols**](SECURITY_PROTOCOLS.md) - Hardening roadmap
+- [**Contributing**](contributing.md) - How to contribute to crecall
 
 ## Historical Archive
 Root-level legacy docs (`INSTALL.md`, `PATCH_NOTES.md`, `README.md`) superseded by docs/ structure. See `archive/legacy_notes/` for historical notes.

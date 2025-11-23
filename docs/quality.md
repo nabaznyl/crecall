@@ -216,4 +216,4 @@ python scripts/benchmark.py --baseline baseline.json
 
 ---
 
-See [../TEST_RESULTS.md](../TEST_RESULTS.md) for historical test runs.
+All test results are tracked in CI and stored as GitHub Actions artifacts.

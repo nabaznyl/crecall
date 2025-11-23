@@ -9,36 +9,49 @@ on:
 
 jobs:
   quality:
+    name: Quality & Tests (matrix)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      
+          python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         working-directory: backend
         run: |
           pip install --upgrade pip
           pip install "black==25.11.0" "ruff==0.9.2"
           pip install -r requirements.txt
-      
+
       - name: Lint - Black
         working-directory: backend
         run: black --check app tests
-      
+
       - name: Lint - Ruff
         working-directory: backend
         run: ruff check app tests
-      
-      - name: Tests
+
+      - name: Tests with coverage (fail under 80%)
         working-directory: backend
         env:
           CRECALL_TEST_MODE: "1"
           DB_URL: "sqlite+aiosqlite:///./test.db"
           PYTHONPATH: ${{ github.workspace }}/backend
-        run: pytest -v --tb=short
+        run: |
+          pytest -v --tb=short --cov=app --cov-report=term --cov-report=xml --cov-fail-under=80
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: |
+            backend/coverage.xml
 
   dependency-scan:
     name: Dependency Vulnerability Scan

@@ -1,0 +1,44 @@
+name: Code Quality & Linting
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade "black==25.11.0" "ruff==0.9.2"
+
+      - name: Show tool versions
+        working-directory: backend
+        run: |
+          python -V
+          black --version
+          ruff --version
+
+      - name: Run Black (check)
+        working-directory: backend
+        run: |
+          black --config pyproject.toml --check app tests
+
+      - name: Run Ruff (lint with auto-fix)
+        working-directory: backend
+        run: |
+          ruff check --fix app tests

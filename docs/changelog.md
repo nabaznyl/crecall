@@ -189,7 +189,3 @@ Complete chronological changelog for crecall.
 ### Future Migrations
 - v1.0.0: PostgreSQL recommended
 - Full migration scripts provided
-
----
-
-See [../PATCH_NOTES.md](../PATCH_NOTES.md) for detailed feature checklists.

@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    branches: [ stable ]
+  workflow_dispatch:
+    inputs:
+      tag_override:
+        description: "Optional exact tag to release (e.g., v0.1.120.3)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install build tooling (Python)
+        run: |
+          python -m pip install --upgrade pip
+          pip install build cyclonedx-bom
+
+      - name: Build backend package (wheel + sdist)
+        working-directory: backend
+        run: |
+          python -m build
+
+      - name: Generate Python SBOM (CycloneDX)
+        working-directory: backend
+        run: |
+          cyclonedx-py requirements -r requirements.txt -o backend-cyclonedx-sbom.json
+
+      - name: Install frontend deps & CycloneDX
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save @cyclonedx/cyclonedx-npm
+
+      - name: Generate Node SBOM (CycloneDX)
+        working-directory: frontend
+        run: |
+          npx cyclonedx-npm --output-file frontend-cyclonedx-sbom.json --include-dev
+
+      - name: Compute next tag (v.0.1.x.y) and changelog
+        id: version
+        env:
+          TAG_OVERRIDE: ${{ inputs.tag_override }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          if [[ -n "${TAG_OVERRIDE:-}" ]]; then
+            new_tag="$TAG_OVERRIDE"
+            echo "Using override tag: $new_tag"
+            prev_tag=$(git tag --list 'v.0.1.*' | grep -E '^v\.0\.1\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          else
+            latest=$(git tag --list 'v.0.1.*' | grep -E '^v\.0\.1\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+            prev_tag="$latest"
+            if [[ -n "$latest" ]] && [[ "$latest" =~ ^v\.0\.1\.([0-9]+)\.([0-9]+)$ ]]; then
+              x="${BASH_REMATCH[1]}"; y="${BASH_REMATCH[2]}"
+            else
+              x=0; y=0
+            fi
+            y=$((y+1))
+            if [[ $y -gt 99 ]]; then
+              x=$((x+1)); y=0
+            fi
+            new_tag="v.0.1.${x}.${y}"
+          fi
+
+          echo "prev_tag=$prev_tag" >> "$GITHUB_OUTPUT"
+          echo "new_tag=$new_tag" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${prev_tag:-}" ]]; then
+            git log "${prev_tag}..HEAD" --pretty=format:'- %s' > RELEASE_NOTES.md || true
+          else
+            git log -n 200 --pretty=format:'- %s' > RELEASE_NOTES.md || true
+          fi
+
+          echo "Computed new tag: $new_tag"
+          echo "Previous tag: ${prev_tag:-<none>}"
+
+      - name: Create annotated tag and push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.new_tag }}" -m "Release ${{ steps.version.outputs.new_tag }}"
+          git push origin "${{ steps.version.outputs.new_tag }}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          name: ${{ steps.version.outputs.new_tag }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          files: |
+            backend/dist/*.whl
+            backend/dist/*.tar.gz
+            backend/backend-cyclonedx-sbom.json
+            frontend/frontend-cyclonedx-sbom.json

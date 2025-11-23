@@ -32,17 +32,25 @@ See [docs/installation.md](docs/installation.md) for complete setup.
 
 ## Documentation
 
-**Start Here**: [docs/README.md](docs/README.md)
+**📚 Full Documentation**: [https://nabaznyl.github.io/crecall/](https://nabaznyl.github.io/crecall/)
+
+**Local Docs**:
+```bash
+pip install mkdocs-material
+mkdocs serve
+# Visit http://localhost:8000
+```
+
+### Quick Links
 
 | Guide | Purpose |
 |-------|---------|
+| [Quick Start](docs/quick-start.md) | Get running in 5 minutes |
 | [Installation](docs/installation.md) | Setup (source, Docker, PostgreSQL) |
 | [Configuration](docs/CONFIGURATION.md) | Environment & settings |
-| [Data Model](docs/data_model.md) | Entities, relationships, lifecycle |
-| [Workflows](docs/workflows.md) | Core user journeys |
-| [Development](docs/DEVELOPMENT.md) | Developer setup & testing |
-| [Version History](docs/changelog.md) | Complete changelog |
-| [Quality](docs/quality.md) | Test tiers & coverage |
+| [API Reference](docs/api/rest.md) | REST API documentation |
+| [Contributing](docs/contributing.md) | How to contribute |
+| [Architecture](docs/architecture.md) | System design & patterns |
 
 **Architecture & Planning**:
 - [Vision](VISION.md) - Product intent, personas, metrics
