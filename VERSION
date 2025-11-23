@@ -4,9 +4,10 @@
 # Channels: stable, nightly, dev
 
 VERSION=0.1.0
-CHANNEL=dev
-BUILD_NUMBER=7
+CHANNEL=stable
+BUILD_NUMBER=1
 FULL_VERSION=${VERSION}-${CHANNEL}-${BUILD_NUMBER}
 
 # Version history:
-# 0.1.0-dev-7: (Add description)
+# 0.1.0-stable-1: First stable release candidate
+# 0.1.0-dev-7: Development baseline
