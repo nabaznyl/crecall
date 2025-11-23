@@ -82,3 +82,28 @@ jobs:
         with:
           name: otel-integration-${{ matrix.python-version }}
           path: otel-reports/otel-integration-${{ matrix.python-version }}.txt
+
+      - name: Post integration summary to PR (first lines)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './otel-reports/otel-integration-${{ matrix.python-version }}.txt';
+            function escapeHtml(s) {
+              return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+            let body = `**OTEL Integration smoke — Python ${{ matrix.python-version }}**\n\n`;
+            try {
+              const txt = fs.readFileSync(path, 'utf8');
+              const preview = txt.split('\n').slice(0,50).join('\n');
+              body += `<details><summary>Show report preview</summary>\n\n<pre>${escapeHtml(preview)}</pre>\n</details>`;
+            } catch (e) {
+              body += '_Could not read integration report (file missing).';
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: body
+            });
