@@ -1,4 +1,9 @@
 # Optional OpenTelemetry instrumentation for runtime tracing
 # Install when you want automatic FastAPI/ASGI instrumentation and exporters.
-opentelemetry-instrumentation-fastapi
-opentelemetry-instrumentation-asgi
+opentelemetry-instrumentation-fastapi==0.59b0
+opentelemetry-instrumentation-asgi==0.59b0
+# Pin core OTEL packages to versions compatible with the instrumentation
+opentelemetry-api==1.38.0
+opentelemetry-sdk==1.38.0
+opentelemetry-semantic-conventions==0.59b0
+opentelemetry-exporter-otlp-proto-http
