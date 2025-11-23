@@ -73,9 +73,11 @@ class MetricsCollector:
         # Counters
         for (name, labels), value in self._counters.items():
             label_str = ",".join([f"{k}='{v}'" for k, v in labels])
-            lines.append(
-                f"crecall_counter_total{{metric='{name}'{(','+label_str) if label_str else ''}}} {value}"
+            labels_suffix = f",{label_str}" if label_str else ""
+            metric_line = (
+                f"crecall_counter_total{{metric='{name}'{labels_suffix}}} {value}"
             )
+            lines.append(metric_line)
         # Latency summaries
         for (name, labels), samples in self._latency.items():
             if not samples:
@@ -86,7 +88,8 @@ class MetricsCollector:
             p95 = sorted_samples[int(0.95 * (count - 1))]
             p99 = sorted_samples[int(0.99 * (count - 1))]
             label_str = ",".join([f"{k}='{v}'" for k, v in labels])
-            prefix = f"crecall_latency_ms_summary{{metric='{name}'{(','+label_str) if label_str else ''}}}"
+            labels_suffix = f",{label_str}" if label_str else ""
+            prefix = f"crecall_latency_ms_summary{{metric='{name}'{labels_suffix}}}"
             lines.append(f"{prefix} {round(avg,2)}")
             lines.append(f"{prefix}_p95 {round(p95,2)}")
             lines.append(f"{prefix}_p99 {round(p99,2)}")

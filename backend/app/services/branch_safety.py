@@ -61,7 +61,8 @@ class BranchSafety:
             if info["dirty"] or (b == "unknown"):
                 rogue_candidates.append(b)
 
-        # Conflicts if different branches share identical git_commit hash (likely detached head or resets)
+        # Conflicts if different branches share identical git_commit hash
+        # (likely detached HEAD or resets)
         commit_to_branches: dict[str, list[str]] = {}
         for b, info in heads.items():
             commit = info.get("git_commit") or ""

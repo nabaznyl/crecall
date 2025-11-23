@@ -64,7 +64,11 @@ class ClipRetentionManager:
 
     def update_config(self, **kwargs) -> dict:
         """Update retention settings and persist.
-        Accepts: clip_keep_last (int), auto_prune_enabled (bool), preserve_manual_clips (bool), preserve_important_clips (bool)
+        Accepts:
+        - clip_keep_last (int)
+        - auto_prune_enabled (bool)
+        - preserve_manual_clips (bool)
+        - preserve_important_clips (bool)
         Ignores unknown keys.
         """
         allowed = {
@@ -144,10 +148,10 @@ class ClipRetentionManager:
             else await db.scalar(select(func.count(Clip.id)))
         )
         auto = await db.scalar(
-            select(func.count(Clip.id)).where(*(where_clause + [Clip.is_auto == True]))
+            select(func.count(Clip.id)).where(*(where_clause + [Clip.is_auto.is_(True)]))
         )
         manual = await db.scalar(
-            select(func.count(Clip.id)).where(*(where_clause + [Clip.is_auto == False]))
+            select(func.count(Clip.id)).where(*(where_clause + [Clip.is_auto.is_(False)]))
         )
         total = total or 0
         auto = auto or 0
@@ -191,8 +195,9 @@ class ClipRetentionManager:
         stmt = stmt.order_by(Clip.created_at.desc())
         result = await db.execute(stmt)
         rows = result.all()
-        # Reconstruct lightweight clip-like objects using simple namespace pattern
-        # Use dicts instead of Clip objects for lightweight processing; adapt should_preserve logic inline
+        # Reconstruct lightweight clip-like objects using simple namespace pattern.
+        # Use dicts instead of Clip objects for lightweight processing; adapt
+        # should_preserve logic inline.
         all_clips = [
             {
                 "id": r[0],

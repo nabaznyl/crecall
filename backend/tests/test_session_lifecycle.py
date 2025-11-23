@@ -4,16 +4,13 @@ Uses sync TestClient for API tests, async for service layer.
 """
 
 import pytest
-
-pytestmark = pytest.mark.session_lifecycle
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.session_service import SessionService
 
+pytestmark = pytest.mark.session_lifecycle
 
 def test_freeze_active_session(client):
-    """Test freezing an active session."""
-    # Create active session
     response = client.post("/api/sessions/", json={"session_id": "test_freeze"})
     assert response.status_code in (200, 201)
 

@@ -1,9 +1,10 @@
 """Retention pruning scheduler for archived sessions and stale memories.
 
 Rules:
-- Prune archived sessions older than session_retention_days.
-- Prune low-importance memories (importance <= importance_threshold) older than memory_retention_days,
-  excluding those belonging to sessions slated for deletion (cascade handles them).
+- Prune archived sessions older than ``session_retention_days``.
+- Prune low-importance memories (``importance <= importance_threshold``) older than
+    ``memory_retention_days``, excluding those belonging to sessions slated for
+    deletion (cascade handles them).
 - Dry-run mode reports counts without deleting.
 """
 

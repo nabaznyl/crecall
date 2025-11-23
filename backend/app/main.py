@@ -5,8 +5,11 @@ Main FastAPI application entry point.
 import logging
 import os
 import sys
+import uuid
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -29,11 +32,6 @@ except Exception as e:
     logger = logging.getLogger(__name__)
     logger.warning(f"Centralized config/logging unavailable: {e}")
 
-import uuid
-from datetime import UTC, datetime
-
-from fastapi import Response
-
 from app.api import clipped as clipped_router
 from app.api import clips, context_router, export_import, memories, sessions
 from app.core.config import settings
@@ -53,8 +51,6 @@ from app.services.session_service import SessionService
 
 # Global crash detector instance
 crash_detector = CrashDetector()
-
-from contextlib import asynccontextmanager
 
 
 @asynccontextmanager

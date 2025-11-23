@@ -89,9 +89,9 @@ async def test_ranked_search_session_scope_isolated(db_session):
         MemoryCreate(session_id="B", content="shared term", tags=[], category=None, importance=2)
     )
 
-    ranked_A = await service.search_memories(query="shared", limit=5, session_id="A")
-    ranked_B = await service.search_memories(query="shared", limit=5, session_id="B")
-    assert all(r["memory"].session_id != ranked_B[0]["memory"].session_id for r in ranked_A)
+    ranked_a = await service.search_memories(query="shared", limit=5, session_id="A")
+    ranked_b = await service.search_memories(query="shared", limit=5, session_id="B")
+    assert all(r["memory"].session_id != ranked_b[0]["memory"].session_id for r in ranked_a)
 
 
 @pytest.mark.asyncio

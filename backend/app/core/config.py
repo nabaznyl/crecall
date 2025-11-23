@@ -42,7 +42,8 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore",  # Phase 1: Allow extra env vars (ENVIRONMENT, LOG_LEVEL, BACKUP_DIR, DB_URL)
+        # Allow extra env vars (ENVIRONMENT, LOG_LEVEL, BACKUP_DIR, DB_URL)
+        extra="ignore",
     )
 
 

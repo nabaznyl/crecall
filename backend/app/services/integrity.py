@@ -38,15 +38,6 @@ class Integrity:
         return bool(expected and expected.get("sig") == integ.get("sig"))
 
     @staticmethod
-    def verify_dict(data: dict) -> bool:
-        sig = data.get("integrity")
-        if not sig:
-            return False
-        temp = {k: v for k, v in data.items() if k != "integrity"}
-        calc = Integrity.sign_dict(temp)
-        return sig == calc
-
-    @staticmethod
     def status_dict(data: dict) -> str:
         """Return verification status string."""
         if not data.get("integrity"):

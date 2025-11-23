@@ -44,9 +44,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Per-endpoint override
         effective_limit = self.dynamic_limits.get(request.url.path, self.limit)
         key = f"ratelimit:{client_ip}:{int(time.time() // 60)}"
-        # Test harness overrides (deterministic forcing) only active in test mode
-        # If CRECALL_TEST_MODE is set and header X-Force-429 present, immediately block
-        # If header X-RateLimit-Override-Limit provided (int), replace effective_limit for this request
+        # Test harness overrides (deterministic forcing) only active in test mode.
+        # If CRECALL_TEST_MODE is set and header X-Force-429 present, immediately
+        # block. If header X-RateLimit-Override-Limit provided (int), replace
+        # effective_limit for this request.
         import os
 
         if os.getenv("CRECALL_TEST_MODE") == "1":

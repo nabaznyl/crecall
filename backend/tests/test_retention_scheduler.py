@@ -37,7 +37,13 @@ async def test_retention_dry_run(db_session: AsyncSession):
     if hasattr(fr, "__await__"):
         await fr
     # Stale low-importance memory (not in archived session)
-    await service.create_memory(MemoryCreate(session_id="active_old", content="stale", importance=0))  # type: ignore
+    await service.create_memory(
+        MemoryCreate(
+            session_id="active_old",
+            content="stale",
+            importance=0,
+        )
+    )  # type: ignore
     # Make memory older than cutoff by manual timestamp tweak
     result = await db_session.execute(select(Memory).where(Memory.content == "stale"))
     mem_obj = result.scalar_one()
@@ -63,7 +69,13 @@ async def test_retention_execute(db_session: AsyncSession):
     if hasattr(fr, "__await__"):
         await fr
     # Add memory inside archived session (will be deleted via cascade)
-    await service.create_memory(MemoryCreate(session_id="old_archived_exec", content="m1", importance=0))  # type: ignore
+    await service.create_memory(
+        MemoryCreate(
+            session_id="old_archived_exec",
+            content="m1",
+            importance=0,
+        )
+    )  # type: ignore
 
     # Old low-importance memory in active session
     session_active = Session(session_id="active_for_mem", status="active", created_at=old_time)
@@ -71,7 +83,13 @@ async def test_retention_execute(db_session: AsyncSession):
     fr = db_session.flush()
     if hasattr(fr, "__await__"):
         await fr
-    await service.create_memory(MemoryCreate(session_id="active_for_mem", content="stale2", importance=0))  # type: ignore
+    await service.create_memory(
+        MemoryCreate(
+            session_id="active_for_mem",
+            content="stale2",
+            importance=0,
+        )
+    )  # type: ignore
     result = await db_session.execute(select(Memory).where(Memory.content == "stale2"))
     mem_obj = result.scalar_one()
     mem_obj.created_at = datetime.now(UTC) - timedelta(days=90)  # type: ignore[attr-defined]

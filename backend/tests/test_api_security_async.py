@@ -127,9 +127,9 @@ async def test_metrics_recorded(async_client):
     latency_entries = []
     latency_raw = after.get("latency")
     if isinstance(latency_raw, list):
-        for l in latency_raw:
-            if isinstance(l, dict) and l.get("name") == "http.request":
-                latency_entries.append(l)
+        for entry in latency_raw:
+            if isinstance(entry, dict) and entry.get("name") == "http.request":
+                latency_entries.append(entry)
     assert latency_entries, "Latency entries for http.request missing"
     # Ensure p95 and p99 fields exist and are numeric
     entry = latency_entries[0]

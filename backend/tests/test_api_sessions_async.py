@@ -53,8 +53,8 @@ async def create_session(client: AsyncClient, sid: str) -> dict:
 
 @pytest.mark.asyncio
 async def test_session_create_and_list(async_client):
-    first = await create_session(async_client, "sess-1")
-    second = await create_session(async_client, "sess-2")
+    await create_session(async_client, "sess-1")
+    await create_session(async_client, "sess-2")
 
     resp_list = await async_client.get("/api/sessions/?limit=10")
     assert resp_list.status_code == 200

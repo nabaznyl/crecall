@@ -2,10 +2,11 @@
 
 import pytest
 
-pytestmark = pytest.mark.export_import
 from app.schemas.memory import MemoryCreate
 from app.services.export_service import SCHEMA_VERSION, ExportService
 from app.services.memory_service import MemoryService
+
+pytestmark = pytest.mark.export_import
 
 
 @pytest.mark.asyncio
