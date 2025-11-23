@@ -74,9 +74,7 @@ class MetricsCollector:
         for (name, labels), value in self._counters.items():
             label_str = ",".join([f"{k}='{v}'" for k, v in labels])
             labels_suffix = f",{label_str}" if label_str else ""
-            metric_line = (
-                f"crecall_counter_total{{metric='{name}'{labels_suffix}}} {value}"
-            )
+            metric_line = f"crecall_counter_total{{metric='{name}'{labels_suffix}}} {value}"
             lines.append(metric_line)
         # Latency summaries
         for (name, labels), samples in self._latency.items():
