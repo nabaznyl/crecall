@@ -100,3 +100,6 @@ profiles/
 tmp/
 temp/
 *.tmp
+
+# Private project notes
+.TODO.md
