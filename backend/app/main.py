@@ -26,6 +26,13 @@ try:
     _app_config = get_config()
     logger = logging.getLogger(__name__)
     logger.info("Centralized config loaded", extra={"environment": _app_config.environment})
+    # Initialize tracing (optional) after logging to include trace ids in logs
+    try:
+        from app.observability import init_tracing
+
+        init_tracing("crecall-backend")
+    except Exception:
+        logger.debug("Observability not configured or failed to initialize")
 except Exception as e:
     # Fallback to basic logging if centralized config unavailable
     logging.basicConfig(level=logging.INFO)
@@ -72,6 +79,13 @@ async def lifespan(app: FastAPI):
 
     # Create session + initial clip
     session_id = f"api-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    try:
+        # propagate session_id into structured logging context
+        from crecall.log_context import session_id as _session_ctx
+
+        _session_ctx.set(session_id)
+    except Exception:
+        pass
     async with AsyncSessionLocal() as db:
         session_service = SessionService(db)
         session = await session_service.create_session(
