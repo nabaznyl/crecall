@@ -1,0 +1,33 @@
+name: Benchmarks (nightly)
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-benchmark
+      - name: Run pytest-benchmark
+        working-directory: backend
+        run: |
+          mkdir -p benchmarks
+          TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
+          pytest tests/benchmarks --benchmark-only --benchmark-json=benchmarks/results-${TIMESTAMP}.json
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: backend/benchmarks

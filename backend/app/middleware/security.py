@@ -93,9 +93,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]):
-        request_id = uuid.uuid4().hex
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
+        rid = uuid.uuid4().hex
+        # set contextvar for logging
+        try:
+            from crecall.log_context import request_id as _request_id_ctx
+
+            token = _request_id_ctx.set(rid)
+        except Exception:
+            token = None
+        try:
+            response = await call_next(request)
+        finally:
+            # restore contextvar to previous state
+            try:
+                if token is not None:
+                    _request_id_ctx.reset(token)
+            except Exception:
+                pass
+        response.headers["X-Request-ID"] = rid
         metrics.increment(
             "http.request.count", labels={"path": request.url.path, "method": request.method}
         )
